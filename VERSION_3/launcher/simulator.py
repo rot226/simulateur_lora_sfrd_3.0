@@ -26,7 +26,9 @@ class Simulator:
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
                  duty_cycle: float | None = 0.01, mobility: bool = True,
                  channels=None, channel_distribution: str = "round-robin",
-                 mobility_speed: tuple[float, float] = (2.0, 5.0)):
+                 mobility_speed: tuple[float, float] = (2.0, 5.0),
+                 fixed_sf: int | None = None,
+                 fixed_tx_power: float | None = None):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -47,6 +49,8 @@ class Simulator:
             gérer plusieurs canaux.
         :param channel_distribution: Méthode d'affectation des canaux aux nœuds
             ("round-robin" ou "random").
+        :param fixed_sf: Si défini, tous les nœuds démarrent avec ce SF.
+        :param fixed_tx_power: Si défini, puissance d'émission initiale commune (dBm).
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -57,6 +61,8 @@ class Simulator:
         self.packets_to_send = packets_to_send
         self.adr_node = adr_node
         self.adr_server = adr_server
+        self.fixed_sf = fixed_sf
+        self.fixed_tx_power = fixed_tx_power
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         self.mobility_model = SmoothMobility(area_size, mobility_speed[0], mobility_speed[1])
@@ -91,13 +97,13 @@ class Simulator:
                 gw_y = np.random.rand() * area_size
             self.gateways.append(Gateway(gw_id, gw_x, gw_y))
         
-        # Générer les nœuds aléatoirement dans l'aire et assigner un SF initial
+        # Générer les nœuds aléatoirement dans l'aire et assigner un SF/power initiaux
         self.nodes = []
         for node_id in range(self.num_nodes):
             x = np.random.rand() * area_size
             y = np.random.rand() * area_size
-            sf = np.random.randint(7, 13)        # SF aléatoire entre 7 et 12
-            tx_power = 14.0                      # Puissance d'émission typique en dBm
+            sf = self.fixed_sf if self.fixed_sf is not None else np.random.randint(7, 13)
+            tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
             channel = self.multichannel.select()
             node = Node(node_id, x, y, sf, tx_power, channel=channel)
             # Enregistrer les états initiaux du nœud pour rapport ultérieur

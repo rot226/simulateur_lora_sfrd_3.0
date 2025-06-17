@@ -65,3 +65,11 @@ Le simulateur permet d'utiliser plusieurs canaux radio. Passez une instance
 `channels` et `channel_distribution`. Dans le `dashboard`, réglez **Nb
 sous-canaux** et **Répartition canaux** pour tester un partage Round‑robin ou
 aléatoire des fréquences entre les nœuds.
+
+## SF et puissance initiaux
+
+Deux nouvelles cases à cocher du tableau de bord permettent de fixer le
+Spreading Factor et/ou la puissance d'émission de tous les nœuds avant le
+lancement de la simulation. Une fois la case cochée, sélectionnez la valeur
+souhaitée via le curseur associé (SF 7‑12 et puissance 2‑14 dBm). Si la case est
+décochée, chaque nœud conserve des valeurs aléatoires par défaut.

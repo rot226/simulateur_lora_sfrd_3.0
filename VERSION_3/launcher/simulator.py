@@ -116,6 +116,7 @@ class Simulator:
             node.in_transmission = False # Indique si le nœud est actuellement en transmission
             node.current_end_time = None # Instant de fin de la transmission en cours (si in_transmission True)
             node.last_rssi = None       # Dernier meilleur RSSI mesuré pour la transmission en cours
+            node.last_snr = None        # Dernier meilleur SNR mesuré pour la transmission en cours
             if self.mobility_enabled:
                 self.mobility_model.assign(node)
             self.nodes.append(node)
@@ -212,15 +213,21 @@ class Simulator:
             heard_by_any = False
             best_rssi = None
             # Propagation du paquet vers chaque passerelle
+            best_snr = None
             for gw in self.gateways:
                 distance = node.distance_to(gw)
-                rssi = node.channel.compute_rssi(tx_power, distance)
-                # Vérifier si le signal est décodable par la passerelle
-                if rssi < node.channel.sensitivity_dBm.get(sf, -float('inf')):
+                rssi, snr = node.channel.compute_rssi(tx_power, distance)
+                snr_threshold = (
+                    node.channel.sensitivity_dBm.get(sf, -float("inf"))
+                    - node.channel.noise_floor_dBm()
+                )
+                if snr < snr_threshold:
                     continue  # signal trop faible pour être reçu
                 heard_by_any = True
                 if best_rssi is None or rssi > best_rssi:
                     best_rssi = rssi
+                if best_snr is None or snr > best_snr:
+                    best_snr = snr
                 # Démarrer la réception à la passerelle (gestion des collisions et capture)
                 gw.start_reception(
                     event_id,
@@ -233,8 +240,9 @@ class Simulator:
                     node.channel.frequency_hz,
                 )
             
-            # Retenir le meilleur RSSI mesuré pour cette transmission
+            # Retenir le meilleur RSSI/SNR mesuré pour cette transmission
             node.last_rssi = best_rssi if heard_by_any else None
+            node.last_snr = best_snr if heard_by_any else None
             # Planifier l'événement de fin de transmission correspondant
             heapq.heappush(self.event_queue, (end_time, 0, event_id, node))
             # Planifier les fenêtres de réception LoRaWAN
@@ -315,10 +323,8 @@ class Simulator:
             if self.adr_node:
                 # Mettre à jour l'historique du nœud (20 dernières transmissions)
                 snr_value = None
-                if delivered and node.last_rssi is not None:
-                    # Calculer le SNR mesuré (approximation) à partir du meilleur RSSI
-                    snr_value = (node.last_rssi - node.channel.sensitivity_dBm.get(node.sf, -float('inf'))
-                                 + Simulator.REQUIRED_SNR.get(node.sf, 0.0))
+                if delivered and node.last_snr is not None:
+                    snr_value = node.last_snr
                 node.history.append({'snr': snr_value, 'delivered': delivered})
                 if len(node.history) > 20:
                     node.history.pop(0)
@@ -375,8 +381,12 @@ class Simulator:
                 if not frame:
                     continue
                 distance = node.distance_to(gw)
-                rssi = node.channel.compute_rssi(node.tx_power, distance)
-                if rssi >= node.channel.sensitivity_dBm.get(node.sf, -float('inf')):
+                rssi, snr = node.channel.compute_rssi(node.tx_power, distance)
+                snr_threshold = (
+                    node.channel.sensitivity_dBm.get(node.sf, -float("inf"))
+                    - node.channel.noise_floor_dBm()
+                )
+                if snr >= snr_threshold:
                     node.handle_downlink(frame)
                 selected_gw = gw
                 break

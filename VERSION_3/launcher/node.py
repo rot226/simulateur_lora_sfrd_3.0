@@ -21,7 +21,7 @@ class Node:
         last_move_time (float) : Dernier instant (s) où la position a été mise à jour (mobilité).
     """
 
-    def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float):
+    def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float, channel=None):
         """
         Initialise le nœud avec ses paramètres de départ.
         
@@ -41,6 +41,8 @@ class Node:
         self.sf = sf
         self.initial_tx_power = tx_power
         self.tx_power = tx_power
+        # Canal radio attribué (peut être modifié par le simulateur)
+        self.channel = channel
         
         # Énergie et compteurs de paquets
         self.energy_consumed = 0.0

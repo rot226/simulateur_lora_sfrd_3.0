@@ -41,6 +41,10 @@ packets_input = pn.widgets.IntInput(name="Nombre de paquets (0=infin)", value=0,
 adr_node_checkbox = pn.widgets.Checkbox(name="ADR nœud", value=False)
 adr_server_checkbox = pn.widgets.Checkbox(name="ADR serveur", value=False)
 
+# --- Multi-canaux ---
+num_channels_input = pn.widgets.IntInput(name="Nb sous-canaux", value=1, step=1, start=1)
+channel_dist_select = pn.widgets.RadioButtonGroup(name="Répartition canaux", options=['Round-robin', 'Aléatoire'], value='Round-robin')
+
 # --- Widget pour activer/désactiver la mobilité des nœuds ---
 mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", value=False)
 
@@ -185,7 +189,9 @@ def on_start(event):
         packets_to_send=int(packets_input.value),
         adr_node=adr_node_checkbox.value,
         adr_server=adr_server_checkbox.value,
-        mobility=mobility_checkbox.value
+        mobility=mobility_checkbox.value,
+        channels=[868e6 + i * 200e3 for i in range(num_channels_input.value)],
+        channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin'
     )
 
     if mobility_checkbox.value:
@@ -212,6 +218,8 @@ def on_start(event):
     packets_input.disabled = True
     adr_node_checkbox.disabled = True
     adr_server_checkbox.disabled = True
+    num_channels_input.disabled = True
+    channel_dist_select.disabled = True
     mobility_checkbox.disabled = True
     start_button.disabled = True
     stop_button.disabled = False
@@ -246,6 +254,8 @@ def on_stop(event):
     packets_input.disabled = False
     adr_node_checkbox.disabled = False
     adr_server_checkbox.disabled = False
+    num_channels_input.disabled = False
+    channel_dist_select.disabled = False
     mobility_checkbox.disabled = False
     start_button.disabled = False
     stop_button.disabled = True
@@ -302,7 +312,9 @@ stop_button.on_click(on_stop)
 # --- Mise en page du dashboard ---
 controls = pn.WidgetBox(
     num_nodes_input, num_gateways_input, area_input, mode_select, interval_input, packets_input,
-    adr_node_checkbox, adr_server_checkbox, mobility_checkbox,
+    adr_node_checkbox, adr_server_checkbox,
+    num_channels_input, channel_dist_select,
+    mobility_checkbox,
     pn.Row(start_button, stop_button, export_button),  # Ajout du bouton export ici
     export_message  # Message d'état export
 )

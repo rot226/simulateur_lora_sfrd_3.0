@@ -50,3 +50,11 @@ création du `Simulator` grâce au paramètre `mobility` (booléen). Dans le
 `dashboard`, cette option correspond à la case « Activer la mobilité des
 nœuds ». Si elle est décochée, les positions des nœuds restent fixes pendant
 la simulation.
+
+## Multi-canaux
+
+Le simulateur permet d'utiliser plusieurs canaux radio. Passez une instance
+`MultiChannel` ou une liste de fréquences à `Simulator` via les paramètres
+`channels` et `channel_distribution`. Dans le `dashboard`, réglez **Nb
+sous-canaux** et **Répartition canaux** pour tester un partage Round‑robin ou
+aléatoire des fréquences entre les nœuds.

@@ -15,10 +15,13 @@ class Gateway:
         self.x = x
         self.y = y
         # Liste des transmissions actuellement en cours de réception sur cette passerelle
-        # Chaque élément est un dictionnaire avec 'event_id', 'node_id', 'sf', 'rssi', 'end_time' et 'lost_flag'
+        # Chaque élément est un dictionnaire avec 'event_id', 'node_id', 'sf',
+        # 'frequency', 'rssi', 'end_time' et 'lost_flag'
         self.active_transmissions = []
 
-    def start_reception(self, event_id: int, node_id: int, sf: int, rssi: float, end_time: float, capture_threshold: float, current_time: float):
+    def start_reception(self, event_id: int, node_id: int, sf: int, rssi: float,
+                        end_time: float, capture_threshold: float, current_time: float,
+                        frequency: float):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
         Gère les collisions et le capture effect.
@@ -28,10 +31,17 @@ class Gateway:
         :param rssi: Puissance du signal reçu (RSSI) en dBm.
         :param end_time: Temps (simulation) auquel la transmission se termine.
         :param capture_threshold: Seuil de capture en dB pour considérer qu'un signal plus fort peut être décodé malgré les interférences.
+        :param frequency: Fréquence radio de la transmission (Hz).
         """
-        # Ne considérer que les transmissions de même SF pour les collisions (orthogonalité LoRa entre SF différents).
-        # Récupérer les transmissions actives sur le même SF qui ne sont pas terminées au current_time.
-        concurrent_transmissions = [t for t in self.active_transmissions if t['sf'] == sf and t['end_time'] > current_time]
+        # Ne considérer que les transmissions de même SF et de même fréquence
+        # pour les collisions. Les transmissions sur d'autres fréquences sont
+        # traitées indépendamment.
+        # Récupérer les transmissions actives sur le même SF et la même
+        # fréquence qui ne sont pas terminées au current_time.
+        concurrent_transmissions = [
+            t for t in self.active_transmissions
+            if t['sf'] == sf and t['frequency'] == frequency and t['end_time'] > current_time
+        ]
 
         # Liste des transmissions en collision potentielles (y compris la nouvelle)
         colliders = concurrent_transmissions.copy()
@@ -40,6 +50,7 @@ class Gateway:
             'event_id': event_id,
             'node_id': node_id,
             'sf': sf,
+            'frequency': frequency,
             'rssi': rssi,
             'end_time': end_time,
             'lost_flag': False
@@ -49,7 +60,10 @@ class Gateway:
         if not concurrent_transmissions:
             # Aucun paquet actif sur cette SF: on peut recevoir normalement (pas de collision)
             self.active_transmissions.append(new_transmission)
-            logger.debug(f"Gateway {self.id}: new transmission {event_id} from node {node_id} (SF{sf}) started, RSSI={rssi:.1f} dBm.")
+            logger.debug(
+                f"Gateway {self.id}: new transmission {event_id} from node {node_id} "
+                f"(SF{sf}, {frequency/1e6:.3f} MHz) started, RSSI={rssi:.1f} dBm."
+            )
             return
 
         # Sinon, on a une collision potentielle: déterminer le capture effect

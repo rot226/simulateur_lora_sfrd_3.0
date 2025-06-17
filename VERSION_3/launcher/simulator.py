@@ -213,8 +213,16 @@ class Simulator:
                 if best_rssi is None or rssi > best_rssi:
                     best_rssi = rssi
                 # Démarrer la réception à la passerelle (gestion des collisions et capture)
-                gw.start_reception(event_id, node_id, sf, rssi, end_time,
-                                   node.channel.capture_threshold_dB, self.current_time)
+                gw.start_reception(
+                    event_id,
+                    node_id,
+                    sf,
+                    rssi,
+                    end_time,
+                    node.channel.capture_threshold_dB,
+                    self.current_time,
+                    node.channel.frequency_hz,
+                )
             
             # Retenir le meilleur RSSI mesuré pour cette transmission
             node.last_rssi = best_rssi if heard_by_any else None

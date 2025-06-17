@@ -26,7 +26,6 @@ pn.state.curdoc.title = "Simulateur LoRa"
 # --- Variables globales ---
 sim = None
 sim_callback = None
-mobility_callback = None
 chrono_callback = None
 start_time = None
 elapsed_time = 0
@@ -72,28 +71,6 @@ map_pane = pn.pane.Plotly(height=500, sizing_mode='stretch_width')
 # --- Pane pour l'histogramme SF ---
 sf_hist_pane = pn.pane.Plotly(height=250, sizing_mode='stretch_width')
 
-# --- Fonctions de mobilité ---
-def initialize_node_velocities(nodes, vmax=2.0):
-    for node in nodes:
-        node.vx = (np.random.rand() * 2 - 1) * vmax
-        node.vy = (np.random.rand() * 2 - 1) * vmax
-
-def move_nodes(nodes, area_size, dt=10.0):
-    for node in nodes:
-        node.x += node.vx * dt
-        node.y += node.vy * dt
-        if node.x < 0:
-            node.x = -node.x
-            node.vx = -node.vx
-        if node.x > area_size:
-            node.x = 2 * area_size - node.x
-            node.vx = -node.vx
-        if node.y < 0:
-            node.y = -node.y
-            node.vy = -node.vy
-        if node.y > area_size:
-            node.y = 2 * area_size - node.y
-            node.vy = -node.vy
 
 # --- Mise à jour de la carte ---
 def update_map():
@@ -129,12 +106,6 @@ def on_mode_change(event):
 
 mode_select.param.watch(on_mode_change, 'value')
 
-# --- Callback mobilité ---
-def periodic_mobility_update():
-    global sim
-    if sim is not None and mobility_checkbox.value:
-        move_nodes(sim.nodes, area_input.value, dt=10.0)
-        update_map()
 
 # --- Callback chrono ---
 def periodic_chrono_update():
@@ -166,16 +137,13 @@ def step_simulation():
 
 # --- Bouton "Lancer la simulation" ---
 def on_start(event):
-    global sim, sim_callback, start_time, chrono_callback, elapsed_time, mobility_callback
+    global sim, sim_callback, start_time, chrono_callback, elapsed_time
     elapsed_time = 0
 
     # Arrêter toutes les callbacks au cas où
     if sim_callback:
         sim_callback.stop()
         sim_callback = None
-    if mobility_callback:
-        mobility_callback.stop()
-        mobility_callback = None
     if chrono_callback:
         chrono_callback.stop()
         chrono_callback = None
@@ -194,9 +162,7 @@ def on_start(event):
         channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin'
     )
 
-    if mobility_checkbox.value:
-        initialize_node_velocities(sim.nodes)
-        mobility_callback = pn.state.add_periodic_callback(periodic_mobility_update, period=10000, timeout=None)
+    # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
     chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
 
@@ -231,7 +197,7 @@ def on_start(event):
 
 # --- Bouton "Arrêter la simulation" ---
 def on_stop(event):
-    global sim, sim_callback, mobility_callback, chrono_callback, start_time
+    global sim, sim_callback, chrono_callback, start_time
     if sim is None or not sim.running:
         return
 
@@ -239,9 +205,6 @@ def on_stop(event):
     if sim_callback:
         sim_callback.stop()
         sim_callback = None
-    if mobility_callback:
-        mobility_callback.stop()
-        mobility_callback = None
     if chrono_callback:
         chrono_callback.stop()
         chrono_callback = None
@@ -291,17 +254,13 @@ export_button.on_click(exporter_csv)
 
 # --- Case à cocher mobilité : pour mobilité à chaud, hors simulation ---
 def on_mobility_toggle(event):
-    global sim, mobility_callback
+    global sim
     if sim and sim.running:
-        if event.new:
-            initialize_node_velocities(sim.nodes)
-            if not mobility_callback:
-                mobility_callback = pn.state.add_periodic_callback(periodic_mobility_update, period=10000, timeout=None)
-        else:
-            if mobility_callback:
-                mobility_callback.stop()
-                mobility_callback = None
         sim.mobility_enabled = event.new
+        if event.new:
+            for node in sim.nodes:
+                sim.mobility_model.assign(node)
+                sim.schedule_mobility(node, sim.current_time + sim.mobility_model.step)
 
 mobility_checkbox.param.watch(on_mobility_toggle, 'value')
 

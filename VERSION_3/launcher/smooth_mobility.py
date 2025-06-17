@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import random
 
 
 def bezier_point(p0, p1, p2, p3, t):
@@ -18,18 +18,30 @@ class SmoothMobility:
 
     def assign(self, node):
         """Initialize path and speed for a node."""
-        node.speed = float(np.random.uniform(self.min_speed, self.max_speed))
+        node.speed = float(random.uniform(self.min_speed, self.max_speed))
         node.path = self._generate_path(node.x, node.y)
         node.path_progress = 0.0
         node.path_duration = self._approx_length(node.path) / node.speed
         node.last_move_time = 0.0
 
     def _generate_path(self, x: float, y: float):
-        start = np.array([x, y], dtype=float)
-        dest = np.random.rand(2) * self.area_size
-        offset = (np.random.rand(2) - 0.5) * (self.area_size * 0.1)
-        cp1 = start + (dest - start) / 3 + offset
-        cp2 = start + 2 * (dest - start) / 3 - offset
+        start = (float(x), float(y))
+        dest = (
+            random.random() * self.area_size,
+            random.random() * self.area_size,
+        )
+        offset = (
+            (random.random() - 0.5) * (self.area_size * 0.1),
+            (random.random() - 0.5) * (self.area_size * 0.1),
+        )
+        cp1 = (
+            start[0] + (dest[0] - start[0]) / 3 + offset[0],
+            start[1] + (dest[1] - start[1]) / 3 + offset[1],
+        )
+        cp2 = (
+            start[0] + 2 * (dest[0] - start[0]) / 3 - offset[0],
+            start[1] + 2 * (dest[1] - start[1]) / 3 - offset[1],
+        )
         return start, cp1, cp2, dest
 
     def _approx_length(self, path, steps: int = 20) -> float:
@@ -39,7 +51,7 @@ class SmoothMobility:
         for i in range(1, steps + 1):
             t = i / steps
             pos = bezier_point(p0, p1, p2, p3, t)
-            length += float(np.linalg.norm(pos - prev))
+            length += math.hypot(pos[0] - prev[0], pos[1] - prev[1])
             prev = pos
         return length
 

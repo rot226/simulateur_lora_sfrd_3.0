@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import random
 
 class Channel:
     """Représente le canal de propagation radio pour LoRa."""
@@ -72,7 +72,7 @@ class Channel:
         # Calcul de la perte de propagation
         loss = self.path_loss(distance)
         if self.shadowing_std > 0:
-            loss += np.random.normal(0, self.shadowing_std)
+            loss += random.gauss(0, self.shadowing_std)
         # RSSI = P_tx - pertes - pertes câble
         rssi = tx_power_dBm - loss - self.cable_loss_dB
         snr = rssi - self.noise_floor_dBm()

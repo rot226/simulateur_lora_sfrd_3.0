@@ -18,6 +18,8 @@ class Gateway:
         # Chaque élément est un dictionnaire avec 'event_id', 'node_id', 'sf',
         # 'frequency', 'rssi', 'end_time' et 'lost_flag'
         self.active_transmissions = []
+        # Downlink frames waiting for the corresponding node receive windows
+        self.downlink_buffer = {}
 
     def start_reception(self, event_id: int, node_id: int, sf: int, rssi: float,
                         end_time: float, capture_threshold: float, current_time: float,
@@ -135,6 +137,20 @@ class Gateway:
                     # Paquet perdu sur cette passerelle (collision ou signal trop faible), on ne notifie pas le serveur
                     logger.debug(f"Gateway {self.id}: event {event_id} from node {node_id} was lost and not received.")
                 break  # event_id unique traité, on peut sortir de la boucle
+
+    # ------------------------------------------------------------------
+    # Downlink handling
+    # ------------------------------------------------------------------
+    def buffer_downlink(self, node_id: int, frame):
+        """Store a downlink frame for a node until its RX window."""
+        self.downlink_buffer.setdefault(node_id, []).append(frame)
+
+    def pop_downlink(self, node_id: int):
+        """Retrieve the next pending downlink for a node."""
+        queue = self.downlink_buffer.get(node_id)
+        if queue:
+            return queue.pop(0)
+        return None
 
     def __repr__(self):
         return f"Gateway(id={self.id}, pos=({self.x:.1f},{self.y:.1f}))"

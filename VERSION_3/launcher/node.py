@@ -21,7 +21,8 @@ class Node:
         last_move_time (float) : Dernier instant (s) où la position a été mise à jour (mobilité).
     """
 
-    def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float, channel=None):
+    def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float,
+                 channel=None, devaddr: int | None = None, class_type: str = 'A'):
         """
         Initialise le nœud avec ses paramètres de départ.
         
@@ -59,6 +60,13 @@ class Node:
         self.path = None
         self.path_progress = 0.0
         self.path_duration = 0.0
+
+        # LoRaWAN specific parameters
+        self.devaddr = devaddr if devaddr is not None else node_id
+        self.fcnt_up = 0
+        self.fcnt_down = 0
+        self.class_type = class_type
+        self.awaiting_ack = False
 
     def distance_to(self, other) -> float:
         """
@@ -116,7 +124,41 @@ class Node:
     def add_energy(self, energy_joules: float):
         """
         Ajoute de l'énergie consommée en transmission.
-        
+
         :param energy_joules: Énergie (J) dépensée lors de l'envoi d'un paquet.
         """
         self.energy_consumed += energy_joules
+
+    # ------------------------------------------------------------------
+    # LoRaWAN helper methods
+    # ------------------------------------------------------------------
+    def prepare_uplink(self, payload: bytes, confirmed: bool = False):
+        """Build an uplink LoRaWAN frame and increment the counter."""
+        from .lorawan import LoRaWANFrame
+
+        mhdr = 0x40 if not confirmed else 0x80
+        frame = LoRaWANFrame(mhdr=mhdr, fctrl=0, fcnt=self.fcnt_up,
+                             payload=payload, confirmed=confirmed)
+        self.fcnt_up += 1
+        if confirmed:
+            self.awaiting_ack = True
+        return frame
+
+    def handle_downlink(self, frame):
+        """Process a received downlink frame."""
+        self.fcnt_down = frame.fcnt + 1
+        if frame.confirmed:
+            self.awaiting_ack = False
+        if isinstance(frame.payload, bytes) and frame.payload.startswith(b"ADR:"):
+            try:
+                _, sf_str, pwr_str = frame.payload.decode().split(":")
+                self.sf = int(sf_str)
+                self.tx_power = float(pwr_str)
+            except Exception:
+                pass
+
+    def schedule_receive_windows(self, end_time: float):
+        """Return RX1 and RX2 times for the last uplink."""
+        from .lorawan import compute_rx1, compute_rx2
+
+        return compute_rx1(end_time), compute_rx2(end_time)

@@ -19,6 +19,25 @@ class NetworkServer:
         self.gateways = []
         self.channel = None
 
+    # ------------------------------------------------------------------
+    # Downlink management
+    # ------------------------------------------------------------------
+    def send_downlink(self, node, payload: bytes = b'', confirmed: bool = False,
+                      adr_command: tuple[int, float] | None = None):
+        """Queue a downlink frame for a node via the first gateway."""
+        from .lorawan import LoRaWANFrame
+
+        gw = self.gateways[0] if self.gateways else None
+        if gw is None:
+            return
+        frame = LoRaWANFrame(mhdr=0x60, fctrl=0, fcnt=node.fcnt_down,
+                             payload=payload, confirmed=confirmed)
+        if adr_command:
+            sf, power = adr_command
+            frame.payload = f"ADR:{sf}:{power}".encode()
+        node.fcnt_down += 1
+        gw.buffer_downlink(node.id, frame)
+
     def receive(self, event_id: int, node_id: int, gateway_id: int, rssi: float | None = None):
         """
         Traite la réception d'un paquet par le serveur.

@@ -60,10 +60,27 @@ if __name__ == "__main__":
     parser.add_argument("--interval", type=int, default=10, help="Intervalle moyen ou fixe entre transmissions")
     parser.add_argument("--steps", type=int, default=100, help="Nombre de pas de temps de la simulation")
     parser.add_argument("--output", type=str, help="Fichier CSV pour sauvegarder les résultats (optionnel)")
+    parser.add_argument("--lorawan-demo", action="store_true", help="Exécute un exemple LoRaWAN")
     args = parser.parse_args()
 
     logging.info(f"Simulation d'un réseau LoRa : {args.nodes} nœuds, {args.gateways} gateways, "
                  f"aire={args.area}m, mode={args.mode}, intervalle={args.interval}, steps={args.steps}")
+    if args.lorawan_demo:
+        from launcher.node import Node
+        from launcher.gateway import Gateway
+        from launcher.server import NetworkServer
+
+        gw = Gateway(0, 0, 0)
+        ns = NetworkServer()
+        ns.gateways = [gw]
+        node = Node(0, 0, 0, 7, 14)
+        frame = node.prepare_uplink(b"ping", confirmed=True)
+        ns.send_downlink(node, b"ack")
+        rx1, _ = node.schedule_receive_windows(0)
+        gw.pop_downlink(node.id)  # illustration
+        logging.info(f"Exemple LoRaWAN : trame uplink FCnt={frame.fcnt}, RX1={rx1}s")
+        exit()
+
     delivered, collisions, pdr, energy, avg_delay = simulate(
         args.nodes, args.gateways, args.area, args.mode, args.interval, args.steps
     )

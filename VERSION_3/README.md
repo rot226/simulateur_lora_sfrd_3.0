@@ -73,3 +73,17 @@ Spreading Factor et/ou la puissance d'émission de tous les nœuds avant le
 lancement de la simulation. Une fois la case cochée, sélectionnez la valeur
 souhaitée via le curseur associé (SF 7‑12 et puissance 2‑14 dBm). Si la case est
 décochée, chaque nœud conserve des valeurs aléatoires par défaut.
+
+## Fonctionnalités LoRaWAN
+
+Une couche LoRaWAN simplifiée est maintenant disponible. Le module
+`lorawan.py` définit la structure `LoRaWANFrame` ainsi que les fenêtres
+`RX1` et `RX2`. Les nœuds possèdent des compteurs de trames et les passerelles
+peuvent mettre en file d'attente des downlinks via `NetworkServer.send_downlink`.
+
+Lancer l'exemple minimal :
+
+```bash
+python run.py --lorawan-demo
+```
+ 

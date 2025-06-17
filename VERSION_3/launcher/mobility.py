@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import random
 
 class RandomWaypoint:
     """Modèle de mobilité aléatoire (Random Waypoint simplifié) pour les nœuds."""
@@ -20,8 +20,8 @@ class RandomWaypoint:
         Initialise également son dernier temps de déplacement.
         """
         # Tirer un angle de direction uniforme dans [0, 2π) et une vitesse uniforme dans [min_speed, max_speed].
-        angle = np.random.rand() * 2 * math.pi
-        speed = np.random.uniform(self.min_speed, self.max_speed)
+        angle = random.random() * 2 * math.pi
+        speed = random.uniform(self.min_speed, self.max_speed)
         # Définir les composantes de vitesse selon la direction.
         node.vx = speed * math.cos(angle)
         node.vy = speed * math.sin(angle)

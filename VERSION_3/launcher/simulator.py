@@ -1,8 +1,12 @@
 import math
 import heapq
-import numpy as np
-import pandas as pd
 import logging
+import random
+
+try:
+    import pandas as pd
+except Exception:  # pragma: no cover - pandas optional
+    pd = None
 
 from .node import Node
 from .gateway import Gateway
@@ -93,16 +97,16 @@ class Simulator:
                 gw_y = area_size / 2.0
             else:
                 # Plusieurs passerelles placées aléatoirement
-                gw_x = np.random.rand() * area_size
-                gw_y = np.random.rand() * area_size
+                gw_x = random.random() * area_size
+                gw_y = random.random() * area_size
             self.gateways.append(Gateway(gw_id, gw_x, gw_y))
         
         # Générer les nœuds aléatoirement dans l'aire et assigner un SF/power initiaux
         self.nodes = []
         for node_id in range(self.num_nodes):
-            x = np.random.rand() * area_size
-            y = np.random.rand() * area_size
-            sf = self.fixed_sf if self.fixed_sf is not None else np.random.randint(7, 13)
+            x = random.random() * area_size
+            y = random.random() * area_size
+            sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)
             tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
             channel = self.multichannel.select()
             node = Node(node_id, x, y, sf, tx_power, channel=channel)
@@ -148,10 +152,10 @@ class Simulator:
         for node in self.nodes:
             if self.transmission_mode.lower() == 'random':
                 # Random: tirer un délai initial selon une distribution exponentielle
-                t0 = np.random.exponential(self.packet_interval)
+                t0 = random.expovariate(1.0 / self.packet_interval)
             else:
                 # Periodic: délai initial aléatoire uniforme dans [0, période]
-                t0 = np.random.rand() * self.packet_interval
+                t0 = random.random() * self.packet_interval
             self.schedule_event(node, t0)
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
@@ -254,7 +258,7 @@ class Simulator:
             # Planifier la prochaine transmission de ce nœud (selon le mode), sauf si limite atteinte
             if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
                 if self.transmission_mode.lower() == 'random':
-                    next_interval = np.random.exponential(self.packet_interval)
+                    next_interval = random.expovariate(1.0 / self.packet_interval)
                 else:
                     next_interval = self.packet_interval
                 next_time = end_time + next_interval
@@ -458,11 +462,13 @@ class Simulator:
             'sf_distribution': {sf: sum(1 for node in self.nodes if node.sf == sf) for sf in range(7, 13)}
         }
     
-    def get_events_dataframe(self) -> pd.DataFrame:
+    def get_events_dataframe(self) -> 'pd.DataFrame | None':
         """
         Retourne un DataFrame pandas contenant le log de tous les événements de 
         transmission enrichi des états initiaux et finaux des nœuds.
         """
+        if pd is None:
+            raise RuntimeError("pandas is required for this feature")
         if not self.events_log:
             return pd.DataFrame()
         df = pd.DataFrame(self.events_log)

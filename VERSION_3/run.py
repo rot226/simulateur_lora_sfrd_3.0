@@ -36,7 +36,7 @@ def simulate(nodes, gateways, area, mode, interval, steps):
         if nb_tx > 0:
             total_transmissions += nb_tx
             if nb_tx == 1:
-                # Un seul noeud émet à ce pas -> succès
+                # Un seul nœud émet à ce pas -> succès
                 delivered += 1
                 energy_consumed += 1.0  # consommation d'énergie d'une transmission
                 delays.append(0)  # délai nul (livraison immédiate)

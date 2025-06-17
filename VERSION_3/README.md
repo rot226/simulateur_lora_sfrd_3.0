@@ -33,6 +33,7 @@ python run.py --nodes 20 --mode Random --interval 15
 python run.py --nodes 5 --mode Periodic --interval 10
 
 panel serve dashboard.py --show
+```
 
 ## Duty cycle
 

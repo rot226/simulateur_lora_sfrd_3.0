@@ -81,7 +81,8 @@ chrono_indicator = pn.indicators.Number(name="Durée simulation (s)", value=0, f
 
 
 # --- Pane pour la carte des nœuds/passerelles ---
-map_pane = pn.pane.Plotly(height=500, sizing_mode='stretch_width')
+# Agrandir la surface d'affichage de la carte pour une meilleure lisibilité
+map_pane = pn.pane.Plotly(height=600, sizing_mode='stretch_width')
 
 # --- Pane pour l'histogramme SF ---
 sf_hist_pane = pn.pane.Plotly(height=250, sizing_mode='stretch_width')
@@ -96,19 +97,34 @@ def update_map():
     x_nodes = [node.x for node in sim.nodes]
     y_nodes = [node.y for node in sim.nodes]
     node_ids = [str(node.id) for node in sim.nodes]
-    fig.add_scatter(x=x_nodes, y=y_nodes, mode='markers+text', name='Nœuds',
-                    text=node_ids, textposition='top center',
-                    marker=dict(symbol='circle', color='blue', size=8))
+    fig.add_scatter(
+        x=x_nodes,
+        y=y_nodes,
+        mode='markers+text',
+        name='Nœuds',
+        text=node_ids,
+        textposition='middle center',
+        marker=dict(symbol='circle', color='blue', size=12)
+    )
     x_gw = [gw.x for gw in sim.gateways]
     y_gw = [gw.y for gw in sim.gateways]
-    fig.add_scatter(x=x_gw, y=y_gw, mode='markers', name='Passerelles',
-                    marker=dict(symbol='star', color='red', size=10, line=dict(width=1, color='black')))
+    gw_ids = [str(gw.id + 1) for gw in sim.gateways]
+    fig.add_scatter(
+        x=x_gw,
+        y=y_gw,
+        mode='markers+text',
+        name='Passerelles',
+        text=gw_ids,
+        textposition='middle center',
+        marker=dict(symbol='star', color='red', size=18, line=dict(width=1, color='black'))
+    )
     area = area_input.value
     fig.update_layout(
         title="Position des nœuds et passerelles",
         xaxis_title="X (m)", yaxis_title="Y (m)",
         xaxis_range=[0, area], yaxis_range=[0, area],
-        yaxis=dict(scaleanchor="x", scaleratio=1)
+        yaxis=dict(scaleanchor="x", scaleratio=1),
+        margin=dict(l=20, r=20, t=40, b=20)
     )
     map_pane.object = fig
 

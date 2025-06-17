@@ -67,6 +67,7 @@ class Node:
         self.fcnt_down = 0
         self.class_type = class_type
         self.awaiting_ack = False
+        self.pending_mac_cmd = None
 
     def distance_to(self, other) -> float:
         """
@@ -136,6 +137,10 @@ class Node:
         """Build an uplink LoRaWAN frame and increment the counter."""
         from .lorawan import LoRaWANFrame
 
+        if self.pending_mac_cmd:
+            payload = self.pending_mac_cmd + payload
+            self.pending_mac_cmd = None
+
         mhdr = 0x40 if not confirmed else 0x80
         frame = LoRaWANFrame(mhdr=mhdr, fctrl=0, fcnt=self.fcnt_up,
                              payload=payload, confirmed=confirmed)
@@ -146,16 +151,28 @@ class Node:
 
     def handle_downlink(self, frame):
         """Process a received downlink frame."""
+        from .lorawan import LinkADRReq, LinkADRAns, DR_TO_SF, TX_POWER_INDEX_TO_DBM
+
         self.fcnt_down = frame.fcnt + 1
         if frame.confirmed:
             self.awaiting_ack = False
-        if isinstance(frame.payload, bytes) and frame.payload.startswith(b"ADR:"):
-            try:
-                _, sf_str, pwr_str = frame.payload.decode().split(":")
-                self.sf = int(sf_str)
-                self.tx_power = float(pwr_str)
-            except Exception:
-                pass
+
+        if isinstance(frame.payload, bytes):
+            if len(frame.payload) >= 5 and frame.payload[0] == 0x03:
+                try:
+                    req = LinkADRReq.from_bytes(frame.payload[:5])
+                    self.sf = DR_TO_SF.get(req.datarate, self.sf)
+                    self.tx_power = TX_POWER_INDEX_TO_DBM.get(req.tx_power, self.tx_power)
+                    self.pending_mac_cmd = LinkADRAns().to_bytes()
+                except Exception:
+                    pass
+            elif frame.payload.startswith(b"ADR:"):
+                try:
+                    _, sf_str, pwr_str = frame.payload.decode().split(":")
+                    self.sf = int(sf_str)
+                    self.tx_power = float(pwr_str)
+                except Exception:
+                    pass
 
     def schedule_receive_windows(self, end_time: float):
         """Return RX1 and RX2 times for the last uplink."""

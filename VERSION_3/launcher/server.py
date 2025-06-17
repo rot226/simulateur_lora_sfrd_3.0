@@ -22,19 +22,32 @@ class NetworkServer:
     # ------------------------------------------------------------------
     # Downlink management
     # ------------------------------------------------------------------
-    def send_downlink(self, node, payload: bytes = b'', confirmed: bool = False,
-                      adr_command: tuple[int, float] | None = None):
+    def send_downlink(
+        self,
+        node,
+        payload: bytes = b"",
+        confirmed: bool = False,
+        adr_command: tuple[int, float] | None = None,
+    ):
         """Queue a downlink frame for a node via the first gateway."""
-        from .lorawan import LoRaWANFrame
+        from .lorawan import (
+            LoRaWANFrame,
+            LinkADRReq,
+            SF_TO_DR,
+            DBM_TO_TX_POWER_INDEX,
+        )
 
         gw = self.gateways[0] if self.gateways else None
         if gw is None:
             return
-        frame = LoRaWANFrame(mhdr=0x60, fctrl=0, fcnt=node.fcnt_down,
-                             payload=payload, confirmed=confirmed)
+        frame = LoRaWANFrame(
+            mhdr=0x60, fctrl=0, fcnt=node.fcnt_down, payload=payload, confirmed=confirmed
+        )
         if adr_command:
             sf, power = adr_command
-            frame.payload = f"ADR:{sf}:{power}".encode()
+            dr = SF_TO_DR.get(sf, 5)
+            p_idx = DBM_TO_TX_POWER_INDEX.get(int(power), 0)
+            frame.payload = LinkADRReq(dr, p_idx).to_bytes()
         node.fcnt_down += 1
         gw.buffer_downlink(node.id, frame)
 
@@ -59,11 +72,17 @@ class NetworkServer:
 
         # Appliquer ADR au niveau serveur si activé
         if self.adr_enabled and rssi is not None:
-            # Trouver l'objet node et gateway correspondants
+            from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, LinkADRReq
+
             node = next((n for n in self.nodes if n.id == node_id), None)
             if node:
-                # Ajuster le SF en respectant les bornes [7,12]
+                new_sf = node.sf
                 if rssi > -120 and node.sf > 7:
-                    node.sf -= 1
+                    new_sf -= 1
                 elif rssi < -120 and node.sf < 12:
-                    node.sf += 1
+                    new_sf += 1
+                if new_sf != node.sf:
+                    dr = SF_TO_DR.get(new_sf, SF_TO_DR.get(node.sf, 5))
+                    p_idx = DBM_TO_TX_POWER_INDEX.get(int(node.tx_power), 0)
+                    down = LinkADRReq(dr, p_idx).to_bytes()
+                    self.send_downlink(node, down)

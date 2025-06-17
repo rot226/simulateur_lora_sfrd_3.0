@@ -40,6 +40,13 @@ packets_input = pn.widgets.IntInput(name="Nombre de paquets (0=infin)", value=0,
 adr_node_checkbox = pn.widgets.Checkbox(name="ADR nœud", value=False)
 adr_server_checkbox = pn.widgets.Checkbox(name="ADR serveur", value=False)
 
+# --- Choix SF et puissance initiaux identiques ---
+fixed_sf_checkbox = pn.widgets.Checkbox(name="Choisir SF unique", value=False)
+sf_value_input = pn.widgets.IntSlider(name="SF initial", start=7, end=12, value=7, step=1, disabled=True)
+
+fixed_power_checkbox = pn.widgets.Checkbox(name="Choisir puissance unique", value=False)
+tx_power_input = pn.widgets.FloatSlider(name="Puissance Tx (dBm)", start=2, end=14, value=14, step=1, disabled=True)
+
 # --- Multi-canaux ---
 num_channels_input = pn.widgets.IntInput(name="Nb sous-canaux", value=1, step=1, start=1)
 channel_dist_select = pn.widgets.RadioButtonGroup(name="Répartition canaux", options=['Round-robin', 'Aléatoire'], value='Round-robin')
@@ -159,7 +166,9 @@ def on_start(event):
         adr_server=adr_server_checkbox.value,
         mobility=mobility_checkbox.value,
         channels=[868e6 + i * 200e3 for i in range(num_channels_input.value)],
-        channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin'
+        channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin',
+        fixed_sf=int(sf_value_input.value) if fixed_sf_checkbox.value else None,
+        fixed_tx_power=float(tx_power_input.value) if fixed_power_checkbox.value else None,
     )
 
     # La mobilité est désormais gérée directement par le simulateur
@@ -184,6 +193,10 @@ def on_start(event):
     packets_input.disabled = True
     adr_node_checkbox.disabled = True
     adr_server_checkbox.disabled = True
+    fixed_sf_checkbox.disabled = True
+    sf_value_input.disabled = True
+    fixed_power_checkbox.disabled = True
+    tx_power_input.disabled = True
     num_channels_input.disabled = True
     channel_dist_select.disabled = True
     mobility_checkbox.disabled = True
@@ -217,6 +230,10 @@ def on_stop(event):
     packets_input.disabled = False
     adr_node_checkbox.disabled = False
     adr_server_checkbox.disabled = False
+    fixed_sf_checkbox.disabled = False
+    sf_value_input.disabled = not fixed_sf_checkbox.value
+    fixed_power_checkbox.disabled = False
+    tx_power_input.disabled = not fixed_power_checkbox.value
     num_channels_input.disabled = False
     channel_dist_select.disabled = False
     mobility_checkbox.disabled = False
@@ -264,6 +281,16 @@ def on_mobility_toggle(event):
 
 mobility_checkbox.param.watch(on_mobility_toggle, 'value')
 
+# --- Activation des champs SF et puissance ---
+def on_fixed_sf_toggle(event):
+    sf_value_input.disabled = not event.new
+
+def on_fixed_power_toggle(event):
+    tx_power_input.disabled = not event.new
+
+fixed_sf_checkbox.param.watch(on_fixed_sf_toggle, 'value')
+fixed_power_checkbox.param.watch(on_fixed_power_toggle, 'value')
+
 # --- Associer les callbacks aux boutons ---
 start_button.on_click(on_start)
 stop_button.on_click(on_stop)
@@ -272,6 +299,8 @@ stop_button.on_click(on_stop)
 controls = pn.WidgetBox(
     num_nodes_input, num_gateways_input, area_input, mode_select, interval_input, packets_input,
     adr_node_checkbox, adr_server_checkbox,
+    fixed_sf_checkbox, sf_value_input,
+    fixed_power_checkbox, tx_power_input,
     num_channels_input, channel_dist_select,
     mobility_checkbox,
     pn.Row(start_button, stop_button, export_button),  # Ajout du bouton export ici

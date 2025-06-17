@@ -10,6 +10,7 @@ from .channel import Channel
 from .multichannel import MultiChannel
 from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
+from .smooth_mobility import SmoothMobility
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ class Simulator:
                  transmission_mode: str = 'Random', packet_interval: float = 60.0,
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
                  duty_cycle: float | None = 0.01, mobility: bool = True,
-                 channels=None, channel_distribution: str = "round-robin"):
+                 channels=None, channel_distribution: str = "round-robin",
+                 mobility_speed: tuple[float, float] = (2.0, 5.0)):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -39,6 +41,8 @@ class Simulator:
             défaut à 0.01. Si None, le duty cycle est désactivé.
         :param mobility: Active la mobilité aléatoire des nœuds lorsqu'il est
             à True.
+        :param mobility_speed: Couple (min, max) définissant la plage de
+            vitesses de déplacement des nœuds en m/s lorsqu'ils sont mobiles.
         :param channels: ``MultiChannel`` ou liste de fréquences/``Channel`` pour
             gérer plusieurs canaux.
         :param channel_distribution: Méthode d'affectation des canaux aux nœuds
@@ -55,6 +59,7 @@ class Simulator:
         self.adr_server = adr_server
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
+        self.mobility_model = SmoothMobility(area_size, mobility_speed[0], mobility_speed[1])
 
         # Gestion du duty cycle (activé par défaut à 1 %)
         self.duty_cycle_manager = DutyCycleManager(duty_cycle) if duty_cycle else None
@@ -105,6 +110,8 @@ class Simulator:
             node.in_transmission = False # Indique si le nœud est actuellement en transmission
             node.current_end_time = None # Instant de fin de la transmission en cours (si in_transmission True)
             node.last_rssi = None       # Dernier meilleur RSSI mesuré pour la transmission en cours
+            if self.mobility_enabled:
+                self.mobility_model.assign(node)
             self.nodes.append(node)
 
         # Configurer le serveur réseau avec les références pour ADR
@@ -141,7 +148,7 @@ class Simulator:
             self.schedule_event(node, t0)
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
-                self.schedule_mobility(node, 10.0)
+                self.schedule_mobility(node, self.mobility_model.step)
         
         # Indicateur d'exécution de la simulation
         self.running = True
@@ -342,13 +349,10 @@ class Simulator:
             if node.in_transmission:
                 # Si le nœud est en cours de transmission, reporter le déplacement à la fin de celle-ci
                 next_move_time = node.current_end_time if node.current_end_time is not None else self.current_time
-                if self.mobility_enabled:
-                    self.schedule_mobility(node, next_move_time)
+                self.schedule_mobility(node, next_move_time)
             else:
-                # Déplacer le nœud à une nouvelle position aléatoire
-                node.x = np.random.rand() * self.area_size
-                node.y = np.random.rand() * self.area_size
-                # Enregistrer l'événement de mobilité dans le log
+                # Déplacer le nœud de manière progressive
+                self.mobility_model.move(node, self.current_time)
                 self.events_log.append({
                     'event_id': event_id,
                     'node_id': node_id,
@@ -360,9 +364,8 @@ class Simulator:
                     'energy_J': 0.0,
                     'gateway_id': None
                 })
-                # Planifier le prochain déplacement dans 10 secondes (si simulation toujours active)
                 if self.mobility_enabled and (self.packets_to_send == 0 or self.packets_sent < self.packets_to_send):
-                    self.schedule_mobility(node, time + 10.0)
+                    self.schedule_mobility(node, time + self.mobility_model.step)
             return True
         
         # Si autre type d'événement (non prévu)

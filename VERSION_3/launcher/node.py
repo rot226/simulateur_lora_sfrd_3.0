@@ -56,6 +56,9 @@ class Node:
         self.vx = 0.0          # Vitesse en X (m/s)
         self.vy = 0.0          # Vitesse en Y (m/s)
         self.last_move_time = 0.0  # Temps du dernier déplacement (s)
+        self.path = None
+        self.path_progress = 0.0
+        self.path_duration = 0.0
 
     def distance_to(self, other) -> float:
         """

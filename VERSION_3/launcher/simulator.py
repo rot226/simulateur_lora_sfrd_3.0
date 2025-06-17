@@ -7,6 +7,7 @@ import logging
 from .node import Node
 from .gateway import Gateway
 from .channel import Channel
+from .multichannel import MultiChannel
 from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 
@@ -22,7 +23,8 @@ class Simulator:
     def __init__(self, num_nodes: int = 10, num_gateways: int = 1, area_size: float = 1000.0,
                  transmission_mode: str = 'Random', packet_interval: float = 60.0,
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
-                 duty_cycle: float | None = 0.01, mobility: bool = True):
+                 duty_cycle: float | None = 0.01, mobility: bool = True,
+                 channels=None, channel_distribution: str = "round-robin"):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -37,6 +39,10 @@ class Simulator:
             défaut à 0.01. Si None, le duty cycle est désactivé.
         :param mobility: Active la mobilité aléatoire des nœuds lorsqu'il est
             à True.
+        :param channels: ``MultiChannel`` ou liste de fréquences/``Channel`` pour
+            gérer plusieurs canaux.
+        :param channel_distribution: Méthode d'affectation des canaux aux nœuds
+            ("round-robin" ou "random").
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -52,9 +58,19 @@ class Simulator:
 
         # Gestion du duty cycle (activé par défaut à 1 %)
         self.duty_cycle_manager = DutyCycleManager(duty_cycle) if duty_cycle else None
-        
-        # Initialiser le canal radio et le serveur réseau
-        self.channel = Channel()
+
+        # Initialiser la gestion multi-canaux
+        if isinstance(channels, MultiChannel):
+            self.multichannel = channels
+        else:
+            if channels is None:
+                ch_list = [Channel()]
+            else:
+                ch_list = channels
+            self.multichannel = MultiChannel(ch_list, method=channel_distribution)
+
+        # Compatibilité : premier canal par défaut
+        self.channel = self.multichannel.channels[0]
         self.network_server = NetworkServer()
         
         # Générer les passerelles
@@ -77,7 +93,8 @@ class Simulator:
             y = np.random.rand() * area_size
             sf = np.random.randint(7, 13)        # SF aléatoire entre 7 et 12
             tx_power = 14.0                      # Puissance d'émission typique en dBm
-            node = Node(node_id, x, y, sf, tx_power)
+            channel = self.multichannel.select()
+            node = Node(node_id, x, y, sf, tx_power, channel=channel)
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
             node.initial_x = x
             node.initial_y = y
@@ -160,7 +177,7 @@ class Simulator:
             sf = node.sf
             tx_power = node.tx_power
             # Durée de la transmission
-            duration = self.channel.airtime(sf)
+            duration = node.channel.airtime(sf)
             end_time = time + duration
             if self.duty_cycle_manager:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
@@ -180,16 +197,16 @@ class Simulator:
             # Propagation du paquet vers chaque passerelle
             for gw in self.gateways:
                 distance = node.distance_to(gw)
-                rssi = self.channel.compute_rssi(tx_power, distance)
+                rssi = node.channel.compute_rssi(tx_power, distance)
                 # Vérifier si le signal est décodable par la passerelle
-                if rssi < self.channel.sensitivity_dBm.get(sf, -float('inf')):
+                if rssi < node.channel.sensitivity_dBm.get(sf, -float('inf')):
                     continue  # signal trop faible pour être reçu
                 heard_by_any = True
                 if best_rssi is None or rssi > best_rssi:
                     best_rssi = rssi
                 # Démarrer la réception à la passerelle (gestion des collisions et capture)
                 gw.start_reception(event_id, node_id, sf, rssi, end_time,
-                                   self.channel.capture_threshold_dB, self.current_time)
+                                   node.channel.capture_threshold_dB, self.current_time)
             
             # Retenir le meilleur RSSI mesuré pour cette transmission
             node.last_rssi = best_rssi if heard_by_any else None
@@ -267,7 +284,7 @@ class Simulator:
                 snr_value = None
                 if delivered and node.last_rssi is not None:
                     # Calculer le SNR mesuré (approximation) à partir du meilleur RSSI
-                    snr_value = (node.last_rssi - self.channel.sensitivity_dBm.get(node.sf, -float('inf'))
+                    snr_value = (node.last_rssi - node.channel.sensitivity_dBm.get(node.sf, -float('inf'))
                                  + Simulator.REQUIRED_SNR.get(node.sf, 0.0))
                 node.history.append({'snr': snr_value, 'delivered': delivered})
                 if len(node.history) > 20:

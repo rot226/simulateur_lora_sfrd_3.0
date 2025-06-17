@@ -188,8 +188,9 @@ class Simulator:
             end_time = time + duration
             if self.duty_cycle_manager:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
-            # Mettre à jour le compteur de paquets émis
+            # Mettre à jour les compteurs de paquets émis
             self.packets_sent += 1
+            node.increment_sent()
             # Énergie consommée par la transmission (E = P(mW) * t)
             p_mW = 10 ** (tx_power / 10.0)  # convertir dBm en mW
             energy_J = (p_mW / 1000.0) * duration
@@ -265,6 +266,7 @@ class Simulator:
             delivered = event_id in self.network_server.received_events
             if delivered:
                 self.packets_delivered += 1
+                node.increment_success()
                 # Délai = temps de fin - temps de début de l'émission
                 start_time = next(item for item in self.events_log if item['event_id'] == event_id)['start_time']
                 delay = self.current_time - start_time
@@ -276,6 +278,7 @@ class Simulator:
                 heard = log_entry['heard']
                 if heard:
                     self.packets_lost_collision += 1
+                    node.increment_collision()
                 else:
                     self.packets_lost_no_signal += 1
             # Mettre à jour le résultat et la passerelle du log de l'événement

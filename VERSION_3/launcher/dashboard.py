@@ -355,10 +355,11 @@ controls = pn.WidgetBox(
     mobility_checkbox,
     mobility_speed_min_input,
     mobility_speed_max_input,
-    pn.Row(start_button, stop_button, export_button),  # Ajout du bouton export ici
-    export_message,  # Message d'état export
+    pn.Row(start_button, stop_button),
+    export_button,
+    export_message,
 )
-controls.width = 300
+controls.width = 350
 
 metrics_col = pn.Column(
     chrono_indicator,
@@ -374,7 +375,7 @@ center_col = pn.Column(
     sf_hist_pane,
     sizing_mode="stretch_width",
 )
-center_col.width = 600
+center_col.width = 550
 
 dashboard = pn.Row(
     controls,

@@ -47,6 +47,14 @@ channel_dist_select = pn.widgets.RadioButtonGroup(name="Répartition canaux", op
 # --- Widget pour activer/désactiver la mobilité des nœuds ---
 mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", value=False)
 
+# Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
+mobility_speed_min_input = pn.widgets.FloatInput(
+    name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1
+)
+mobility_speed_max_input = pn.widgets.FloatInput(
+    name="Vitesse max (m/s)", value=5.0, step=0.5, start=0.1
+)
+
 # --- Boutons de contrôle ---
 start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")
 stop_button = pn.widgets.Button(name="Arrêter la simulation", button_type="warning", disabled=True)
@@ -158,6 +166,7 @@ def on_start(event):
         adr_node=adr_node_checkbox.value,
         adr_server=adr_server_checkbox.value,
         mobility=mobility_checkbox.value,
+        mobility_speed=(float(mobility_speed_min_input.value), float(mobility_speed_max_input.value)),
         channels=[868e6 + i * 200e3 for i in range(num_channels_input.value)],
         channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin'
     )
@@ -187,6 +196,8 @@ def on_start(event):
     num_channels_input.disabled = True
     channel_dist_select.disabled = True
     mobility_checkbox.disabled = True
+    mobility_speed_min_input.disabled = True
+    mobility_speed_max_input.disabled = True
     start_button.disabled = True
     stop_button.disabled = False
     export_button.disabled = True
@@ -220,6 +231,8 @@ def on_stop(event):
     num_channels_input.disabled = False
     channel_dist_select.disabled = False
     mobility_checkbox.disabled = False
+    mobility_speed_min_input.disabled = False
+    mobility_speed_max_input.disabled = False
     start_button.disabled = False
     stop_button.disabled = True
     export_button.disabled = False
@@ -274,6 +287,7 @@ controls = pn.WidgetBox(
     adr_node_checkbox, adr_server_checkbox,
     num_channels_input, channel_dist_select,
     mobility_checkbox,
+    mobility_speed_min_input, mobility_speed_max_input,
     pn.Row(start_button, stop_button, export_button),  # Ajout du bouton export ici
     export_message  # Message d'état export
 )

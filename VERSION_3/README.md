@@ -55,6 +55,8 @@ des trajectoires lissées par interpolation de Bézier. La vitesse des nœuds es
 tirée aléatoirement dans la plage spécifiée (par défaut 2 à 5 m/s) et peut être
 modifiée via le paramètre `mobility_speed` du `Simulator`. Les mouvements sont
 donc continus et sans téléportation.
+Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans le
+`dashboard` pour définir cette plage avant de lancer la simulation.
 
 ## Multi-canaux
 

@@ -19,7 +19,7 @@ import numpy as np
 import time
 
 # --- Initialisation Panel ---
-pn.extension('plotly')
+pn.extension("plotly")
 # Définition du titre de la page via le document Bokeh directement
 pn.state.curdoc.title = "Simulateur LoRa"
 
@@ -34,7 +34,9 @@ elapsed_time = 0
 num_nodes_input = pn.widgets.IntInput(name="Nombre de nœuds", value=20, step=1, start=1)
 num_gateways_input = pn.widgets.IntInput(name="Nombre de passerelles", value=1, step=1, start=1)
 area_input = pn.widgets.FloatInput(name="Taille de l'aire (m)", value=1000.0, step=100.0, start=100.0)
-mode_select = pn.widgets.RadioButtonGroup(name="Mode d'émission", options=['Aléatoire', 'Périodique'], value='Aléatoire')
+mode_select = pn.widgets.RadioButtonGroup(
+    name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
+)
 interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=30.0, step=1.0, start=0.1)
 packets_input = pn.widgets.IntInput(name="Nombre de paquets (0=infin)", value=0, step=1, start=0)
 adr_node_checkbox = pn.widgets.Checkbox(name="ADR nœud", value=False)
@@ -49,18 +51,16 @@ tx_power_input = pn.widgets.FloatSlider(name="Puissance Tx (dBm)", start=2, end=
 
 # --- Multi-canaux ---
 num_channels_input = pn.widgets.IntInput(name="Nb sous-canaux", value=1, step=1, start=1)
-channel_dist_select = pn.widgets.RadioButtonGroup(name="Répartition canaux", options=['Round-robin', 'Aléatoire'], value='Round-robin')
+channel_dist_select = pn.widgets.RadioButtonGroup(
+    name="Répartition canaux", options=["Round-robin", "Aléatoire"], value="Round-robin"
+)
 
 # --- Widget pour activer/désactiver la mobilité des nœuds ---
 mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", value=False)
 
 # Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
-mobility_speed_min_input = pn.widgets.FloatInput(
-    name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1
-)
-mobility_speed_max_input = pn.widgets.FloatInput(
-    name="Vitesse max (m/s)", value=5.0, step=0.5, start=0.1
-)
+mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1)
+mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=5.0, step=0.5, start=0.1)
 
 # --- Boutons de contrôle ---
 start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")
@@ -82,10 +82,10 @@ chrono_indicator = pn.indicators.Number(name="Durée simulation (s)", value=0, f
 
 # --- Pane pour la carte des nœuds/passerelles ---
 # Agrandir la surface d'affichage de la carte pour une meilleure lisibilité
-map_pane = pn.pane.Plotly(height=600, sizing_mode='stretch_width')
+map_pane = pn.pane.Plotly(height=600, sizing_mode="stretch_width")
 
 # --- Pane pour l'histogramme SF ---
-sf_hist_pane = pn.pane.Plotly(height=250, sizing_mode='stretch_width')
+sf_hist_pane = pn.pane.Plotly(height=250, sizing_mode="stretch_width")
 
 
 # --- Mise à jour de la carte ---
@@ -100,11 +100,11 @@ def update_map():
     fig.add_scatter(
         x=x_nodes,
         y=y_nodes,
-        mode='markers+text',
-        name='Nœuds',
+        mode="markers+text",
+        name="Nœuds",
         text=node_ids,
-        textposition='middle center',
-        marker=dict(symbol='circle', color='blue', size=12)
+        textposition="middle center",
+        marker=dict(symbol="circle", color="blue", size=12),
     )
     x_gw = [gw.x for gw in sim.gateways]
     y_gw = [gw.y for gw in sim.gateways]
@@ -112,30 +112,34 @@ def update_map():
     fig.add_scatter(
         x=x_gw,
         y=y_gw,
-        mode='markers+text',
-        name='Passerelles',
+        mode="markers+text",
+        name="Passerelles",
         text=gw_ids,
-        textposition='middle center',
-        marker=dict(symbol='star', color='red', size=18, line=dict(width=1, color='black'))
+        textposition="middle center",
+        marker=dict(symbol="star", color="red", size=18, line=dict(width=1, color="black")),
     )
     area = area_input.value
     fig.update_layout(
         title="Position des nœuds et passerelles",
-        xaxis_title="X (m)", yaxis_title="Y (m)",
-        xaxis_range=[0, area], yaxis_range=[0, area],
+        xaxis_title="X (m)",
+        yaxis_title="Y (m)",
+        xaxis_range=[0, area],
+        yaxis_range=[0, area],
         yaxis=dict(scaleanchor="x", scaleratio=1),
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=20, t=40, b=20),
     )
     map_pane.object = fig
 
+
 # --- Callback pour changer le label de l'intervalle selon le mode d'émission ---
 def on_mode_change(event):
-    if event.new == 'Aléatoire':
+    if event.new == "Aléatoire":
         interval_input.name = "Intervalle moyen (s)"
     else:
         interval_input.name = "Période (s)"
 
-mode_select.param.watch(on_mode_change, 'value')
+
+mode_select.param.watch(on_mode_change, "value")
 
 
 # --- Callback chrono ---
@@ -145,26 +149,26 @@ def periodic_chrono_update():
         elapsed_time = time.time() - start_time
         chrono_indicator.value = elapsed_time
 
+
 # --- Callback étape de simulation ---
 def step_simulation():
     if sim is None:
         return
     cont = sim.step()
     metrics = sim.get_metrics()
-    pdr_indicator.value = metrics['PDR']
-    collisions_indicator.value = metrics['collisions']
-    energy_indicator.value = metrics['energy_J']
-    delay_indicator.value = metrics['avg_delay_s']
-    sf_dist = metrics['sf_distribution']
-    sf_fig = go.Figure(
-        data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))]
-    )
+    pdr_indicator.value = metrics["PDR"]
+    collisions_indicator.value = metrics["collisions"]
+    energy_indicator.value = metrics["energy_J"]
+    delay_indicator.value = metrics["avg_delay_s"]
+    sf_dist = metrics["sf_distribution"]
+    sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
     sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
     sf_hist_pane.object = sf_fig
     update_map()
     if not cont:
         on_stop(None)
         return
+
 
 # --- Bouton "Lancer la simulation" ---
 def on_start(event):
@@ -183,7 +187,7 @@ def on_start(event):
         num_nodes=int(num_nodes_input.value),
         num_gateways=int(num_gateways_input.value),
         area_size=float(area_input.value),
-        transmission_mode='Random' if mode_select.value == 'Aléatoire' else 'Periodic',
+        transmission_mode="Random" if mode_select.value == "Aléatoire" else "Periodic",
         packet_interval=float(interval_input.value),
         packets_to_send=int(packets_input.value),
         adr_node=adr_node_checkbox.value,
@@ -191,7 +195,7 @@ def on_start(event):
         mobility=mobility_checkbox.value,
         mobility_speed=(float(mobility_speed_min_input.value), float(mobility_speed_max_input.value)),
         channels=[868e6 + i * 200e3 for i in range(num_channels_input.value)],
-        channel_distribution='random' if channel_dist_select.value == 'Aléatoire' else 'round-robin',
+        channel_distribution="random" if channel_dist_select.value == "Aléatoire" else "round-robin",
         fixed_sf=int(sf_value_input.value) if fixed_sf_checkbox.value else None,
         fixed_tx_power=float(tx_power_input.value) if fixed_power_checkbox.value else None,
     )
@@ -235,6 +239,7 @@ def on_start(event):
     sim.running = True
     sim_callback = pn.state.add_periodic_callback(step_simulation, period=100, timeout=None)
 
+
 # --- Bouton "Arrêter la simulation" ---
 def on_stop(event):
     global sim, sim_callback, chrono_callback, start_time
@@ -273,6 +278,7 @@ def on_stop(event):
     start_time = None
     export_message.object = "✅ Simulation terminée. Tu peux exporter les résultats."
 
+
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
     global sim
@@ -296,7 +302,9 @@ def exporter_csv(event=None):
     else:
         export_message.object = "⚠️ Lance la simulation d'abord !"
 
+
 export_button.on_click(exporter_csv)
+
 
 # --- Case à cocher mobilité : pour mobilité à chaud, hors simulation ---
 def on_mobility_toggle(event):
@@ -308,17 +316,21 @@ def on_mobility_toggle(event):
                 sim.mobility_model.assign(node)
                 sim.schedule_mobility(node, sim.current_time + sim.mobility_model.step)
 
-mobility_checkbox.param.watch(on_mobility_toggle, 'value')
+
+mobility_checkbox.param.watch(on_mobility_toggle, "value")
+
 
 # --- Activation des champs SF et puissance ---
 def on_fixed_sf_toggle(event):
     sf_value_input.disabled = not event.new
 
+
 def on_fixed_power_toggle(event):
     tx_power_input.disabled = not event.new
 
-fixed_sf_checkbox.param.watch(on_fixed_sf_toggle, 'value')
-fixed_power_checkbox.param.watch(on_fixed_power_toggle, 'value')
+
+fixed_sf_checkbox.param.watch(on_fixed_sf_toggle, "value")
+fixed_power_checkbox.param.watch(on_fixed_power_toggle, "value")
 
 # --- Associer les callbacks aux boutons ---
 start_button.on_click(on_start)
@@ -326,16 +338,27 @@ stop_button.on_click(on_stop)
 
 # --- Mise en page du dashboard ---
 controls = pn.WidgetBox(
-    num_nodes_input, num_gateways_input, area_input, mode_select, interval_input, packets_input,
-    adr_node_checkbox, adr_server_checkbox,
-    fixed_sf_checkbox, sf_value_input,
-    fixed_power_checkbox, tx_power_input,
-    num_channels_input, channel_dist_select,
+    num_nodes_input,
+    num_gateways_input,
+    area_input,
+    mode_select,
+    interval_input,
+    packets_input,
+    adr_node_checkbox,
+    adr_server_checkbox,
+    fixed_sf_checkbox,
+    sf_value_input,
+    fixed_power_checkbox,
+    tx_power_input,
+    num_channels_input,
+    channel_dist_select,
     mobility_checkbox,
-    mobility_speed_min_input, mobility_speed_max_input,
+    mobility_speed_min_input,
+    mobility_speed_max_input,
     pn.Row(start_button, stop_button, export_button),  # Ajout du bouton export ici
-    export_message  # Message d'état export
+    export_message,  # Message d'état export
 )
+controls.width = 300
 
 metrics_col = pn.Column(
     chrono_indicator,
@@ -344,10 +367,19 @@ metrics_col = pn.Column(
     energy_indicator,
     delay_indicator,
 )
+metrics_col.width = 220
 
-dashboard = pn.Column(
-    controls,
-    pn.Row(map_pane, metrics_col, sizing_mode='stretch_width'),
+center_col = pn.Column(
+    map_pane,
     sf_hist_pane,
+    sizing_mode="stretch_width",
+)
+center_col.width = 650
+
+dashboard = pn.Row(
+    controls,
+    center_col,
+    metrics_col,
+    sizing_mode="stretch_width",
 )
 dashboard.servable(title="Simulateur LoRa")

@@ -36,10 +36,12 @@ panel serve dashboard.py --show
 
 ## Duty cycle
 
-Un gestionnaire de duty cycle simple est disponible via `duty_cycle.py`. Vous
-pouvez l'activer dans `Simulator` en passant le paramètre `duty_cycle` (par
-exemple `0.01` pour 1 %). Les transmissions seront automatiquement retardées
-afin de respecter cette contrainte.
+Le simulateur applique par défaut un duty cycle de 1 % pour se rapprocher des
+contraintes LoRa réelles. Le gestionnaire de duty cycle situé dans
+`duty_cycle.py` peut être configuré en passant un autre paramètre `duty_cycle`
+à `Simulator` (par exemple `0.02` pour 2 %). Transmettre `None` désactive ce
+mécanisme. Les transmissions sont automatiquement retardées pour respecter ce
+pourcentage.
 
 ## Mobilité optionnelle
 

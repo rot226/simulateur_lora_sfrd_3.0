@@ -3,16 +3,33 @@ import numpy as np
 
 class Channel:
     """Représente le canal de propagation radio pour LoRa."""
-    def __init__(self, frequency_hz: float = 868e6, path_loss_exp: float = 2.7, shadowing_std: float = 6.0):
+
+    def __init__(
+        self,
+        frequency_hz: float = 868e6,
+        path_loss_exp: float = 2.7,
+        shadowing_std: float = 6.0,
+        cable_loss_dB: float = 0.0,
+        receiver_noise_floor_dBm: float = -174.0,
+        noise_figure_dB: float = 6.0,
+    ):
         """
         Initialise le canal radio avec paramètres de propagation.
-        :param frequency_hz: Fréquence en Hz (par défaut 868 MHz).
+
+        :param frequency_hz: Fréquence en Hz (par défaut 868 MHz).
         :param path_loss_exp: Exposant de perte de parcours (log-distance).
         :param shadowing_std: Écart-type du shadowing (variations aléatoires en dB), 0 pour ignorer.
+        :param cable_loss_dB: Pertes fixes dues au câble/connectique (dB).
+        :param receiver_noise_floor_dBm: Niveau de bruit thermique de référence (dBm/Hz).
+        :param noise_figure_dB: Facteur de bruit ajouté par le récepteur (dB).
         """
+
         self.frequency_hz = frequency_hz
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
+        self.cable_loss_dB = cable_loss_dB
+        self.receiver_noise_floor_dBm = receiver_noise_floor_dBm
+        self.noise_figure_dB = noise_figure_dB
 
         # Paramètres LoRa (BW 125 kHz, CR 4/5, préambule 8, CRC activé)
         self.bandwidth = 125e3  # 125 kHz
@@ -32,6 +49,11 @@ class Channel:
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
         self.capture_threshold_dB = 6.0
 
+    def noise_floor_dBm(self) -> float:
+        """Retourne le niveau de bruit (dBm) pour la bande passante configurée."""
+        thermal = self.receiver_noise_floor_dBm + 10 * math.log10(self.bandwidth)
+        return thermal + self.noise_figure_dB
+
     def path_loss(self, distance: float) -> float:
         """Calcule la perte de parcours (en dB) pour une distance donnée (m)."""
         if distance <= 0:
@@ -45,17 +67,16 @@ class Channel:
         pl = pl_d0 + 10 * self.path_loss_exp * math.log10(max(distance, 1.0) / 1.0)
         return pl
 
-    def compute_rssi(self, tx_power_dBm: float, distance: float) -> float:
-        """Calcule le RSSI en dBm à une certaine distance pour une puissance d'émission donnée."""
+    def compute_rssi(self, tx_power_dBm: float, distance: float) -> tuple[float, float]:
+        """Calcule le RSSI et le SNR attendus à une certaine distance."""
         # Calcul de la perte de propagation
         loss = self.path_loss(distance)
-        # Ajout du shadowing log-normal si activé
         if self.shadowing_std > 0:
-            shadow = np.random.normal(0, self.shadowing_std)
-            loss += shadow
-        # RSSI = P_tx - pertes
-        rssi = tx_power_dBm - loss
-        return rssi
+            loss += np.random.normal(0, self.shadowing_std)
+        # RSSI = P_tx - pertes - pertes câble
+        rssi = tx_power_dBm - loss - self.cable_loss_dB
+        snr = rssi - self.noise_floor_dBm()
+        return rssi, snr
 
     def airtime(self, sf: int, payload_size: int = 20) -> float:
         """Calcule l'airtime complet d'un paquet LoRa en secondes."""

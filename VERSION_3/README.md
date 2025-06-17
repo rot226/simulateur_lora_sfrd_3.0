@@ -66,6 +66,19 @@ Le simulateur permet d'utiliser plusieurs canaux radio. Passez une instance
 sous-canaux** et **Répartition canaux** pour tester un partage Round‑robin ou
 aléatoire des fréquences entre les nœuds.
 
+## Paramètres radio avancés
+
+Le constructeur `Channel` accepte trois options pour modéliser plus finement la
+réception :
+
+- `cable_loss` : pertes fixes (dB) entre le transceiver et l'antenne.
+- `receiver_noise_floor` : bruit thermique de référence en dBm/Hz (par défaut
+  `-174`).
+- `noise_figure` : facteur de bruit du récepteur en dB.
+
+Ces valeurs influencent le calcul du RSSI et du SNR retournés par
+`Channel.compute_rssi`.
+
 ## SF et puissance initiaux
 
 Deux nouvelles cases à cocher du tableau de bord permettent de fixer le

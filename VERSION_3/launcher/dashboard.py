@@ -17,7 +17,6 @@ if ROOT_DIR not in sys.path:
 from launcher.simulator import Simulator
 import numpy as np
 import time
-import os
 
 # --- Initialisation Panel ---
 pn.extension('plotly')

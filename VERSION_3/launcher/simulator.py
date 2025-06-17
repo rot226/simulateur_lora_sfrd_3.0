@@ -22,7 +22,7 @@ class Simulator:
     def __init__(self, num_nodes: int = 10, num_gateways: int = 1, area_size: float = 1000.0,
                  transmission_mode: str = 'Random', packet_interval: float = 60.0,
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
-                 duty_cycle: float | None = None, mobility: bool = True):
+                 duty_cycle: float | None = 0.01, mobility: bool = True):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -33,8 +33,8 @@ class Simulator:
         :param packets_to_send: Nombre total de paquets à émettre avant d'arrêter la simulation (0 = infini).
         :param adr_node: Activation de l'ADR côté nœud.
         :param adr_server: Activation de l'ADR côté serveur.
-        :param duty_cycle: Facteur de duty cycle (ex: 0.01 pour 1 %). Si None,
-            le duty cycle est désactivé.
+        :param duty_cycle: Facteur de duty cycle (ex: 0.01 pour 1 %). Par
+            défaut à 0.01. Si None, le duty cycle est désactivé.
         :param mobility: Active la mobilité aléatoire des nœuds lorsqu'il est
             à True.
         """
@@ -50,7 +50,7 @@ class Simulator:
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
 
-        # Gestion du duty cycle
+        # Gestion du duty cycle (activé par défaut à 1 %)
         self.duty_cycle_manager = DutyCycleManager(duty_cycle) if duty_cycle else None
         
         # Initialiser le canal radio et le serveur réseau

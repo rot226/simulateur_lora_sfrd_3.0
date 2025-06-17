@@ -4,7 +4,19 @@ import random
 
 def bezier_point(p0, p1, p2, p3, t):
     """Return point of cubic Bezier curve for parameter t."""
-    return ((1 - t) ** 3) * p0 + 3 * ((1 - t) ** 2) * t * p1 + 3 * (1 - t) * (t ** 2) * p2 + (t ** 3) * p3
+    x = (
+        ((1 - t) ** 3) * p0[0]
+        + 3 * ((1 - t) ** 2) * t * p1[0]
+        + 3 * (1 - t) * (t ** 2) * p2[0]
+        + (t ** 3) * p3[0]
+    )
+    y = (
+        ((1 - t) ** 3) * p0[1]
+        + 3 * ((1 - t) ** 2) * t * p1[1]
+        + 3 * (1 - t) * (t ** 2) * p2[1]
+        + (t ** 3) * p3[1]
+    )
+    return x, y
 
 
 class SmoothMobility:

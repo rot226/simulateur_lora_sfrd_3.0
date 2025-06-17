@@ -104,11 +104,11 @@ def update_map():
         name="Nœuds",
         text=node_ids,
         textposition="middle center",
-        marker=dict(symbol="circle", color="blue", size=12),
+        marker=dict(symbol="circle", color="blue", size=16),
     )
     x_gw = [gw.x for gw in sim.gateways]
     y_gw = [gw.y for gw in sim.gateways]
-    gw_ids = [str(gw.id + 1) for gw in sim.gateways]
+    gw_ids = [str(gw.id) for gw in sim.gateways]
     fig.add_scatter(
         x=x_gw,
         y=y_gw,
@@ -116,7 +116,7 @@ def update_map():
         name="Passerelles",
         text=gw_ids,
         textposition="middle center",
-        marker=dict(symbol="star", color="red", size=18, line=dict(width=1, color="black")),
+        marker=dict(symbol="star", color="red", size=24, line=dict(width=1, color="black")),
     )
     area = area_input.value
     fig.update_layout(
@@ -374,7 +374,7 @@ center_col = pn.Column(
     sf_hist_pane,
     sizing_mode="stretch_width",
 )
-center_col.width = 650
+center_col.width = 600
 
 dashboard = pn.Row(
     controls,

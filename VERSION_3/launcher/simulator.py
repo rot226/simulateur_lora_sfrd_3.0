@@ -15,6 +15,7 @@ from .multichannel import MultiChannel
 from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
+from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,9 @@ class Simulator:
         
         # Générer les passerelles
         self.gateways = []
-        for gw_id in range(self.num_gateways):
+        reset_ids()
+        for _ in range(self.num_gateways):
+            gw_id = next_gateway_id()
             if self.num_gateways == 1:
                 # Une seule passerelle au centre de l'aire
                 gw_x = area_size / 2.0
@@ -103,7 +106,8 @@ class Simulator:
         
         # Générer les nœuds aléatoirement dans l'aire et assigner un SF/power initiaux
         self.nodes = []
-        for node_id in range(self.num_nodes):
+        for _ in range(self.num_nodes):
+            node_id = next_node_id()
             x = random.random() * area_size
             y = random.random() * area_size
             sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)

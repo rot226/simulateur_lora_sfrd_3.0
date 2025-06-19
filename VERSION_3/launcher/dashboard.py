@@ -29,6 +29,7 @@ sim_callback = None
 chrono_callback = None
 start_time = None
 elapsed_time = 0
+max_real_time = None
 
 # --- Widgets de configuration ---
 num_nodes_input = pn.widgets.IntInput(name="Nombre de nœuds", value=20, step=1, start=1)
@@ -61,6 +62,10 @@ mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", 
 # Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
 mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1)
 mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=10.0, step=0.5, start=0.1)
+
+# --- Durée réelle de simulation et bouton d'accélération ---
+real_time_duration_input = pn.widgets.FloatInput(name="Durée réelle max (s)", value=0.0, step=1.0, start=0.0)
+fast_forward_button = pn.widgets.Button(name="Accélérer jusqu'à la fin", button_type="primary", disabled=True)
 
 # --- Boutons de contrôle ---
 start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")
@@ -146,10 +151,12 @@ mode_select.param.watch(on_mode_change, "value")
 
 # --- Callback chrono ---
 def periodic_chrono_update():
-    global chrono_indicator, start_time, elapsed_time
+    global chrono_indicator, start_time, elapsed_time, max_real_time
     if start_time is not None:
         elapsed_time = time.time() - start_time
         chrono_indicator.value = elapsed_time
+        if max_real_time is not None and elapsed_time >= max_real_time:
+            on_stop(None)
 
 
 # --- Callback étape de simulation ---
@@ -174,7 +181,7 @@ def step_simulation():
 
 # --- Bouton "Lancer la simulation" ---
 def on_start(event):
-    global sim, sim_callback, start_time, chrono_callback, elapsed_time
+    global sim, sim_callback, start_time, chrono_callback, elapsed_time, max_real_time
     elapsed_time = 0
 
     # Arrêter toutes les callbacks au cas où
@@ -204,6 +211,7 @@ def on_start(event):
 
     # La mobilité est désormais gérée directement par le simulateur
     start_time = time.time()
+    max_real_time = real_time_duration_input.value if real_time_duration_input.value > 0 else None
     chrono_callback = pn.state.add_periodic_callback(periodic_chrono_update, period=100, timeout=None)
 
     update_map()
@@ -233,8 +241,10 @@ def on_start(event):
     mobility_checkbox.disabled = True
     mobility_speed_min_input.disabled = True
     mobility_speed_max_input.disabled = True
+    real_time_duration_input.disabled = True
     start_button.disabled = True
     stop_button.disabled = False
+    fast_forward_button.disabled = False
     export_button.disabled = True
     export_message.object = "Clique sur Exporter pour générer le fichier CSV après la simulation."
 
@@ -244,7 +254,7 @@ def on_start(event):
 
 # --- Bouton "Arrêter la simulation" ---
 def on_stop(event):
-    global sim, sim_callback, chrono_callback, start_time
+    global sim, sim_callback, chrono_callback, start_time, max_real_time
     if sim is None or not sim.running:
         return
 
@@ -273,11 +283,14 @@ def on_stop(event):
     mobility_checkbox.disabled = False
     mobility_speed_min_input.disabled = False
     mobility_speed_max_input.disabled = False
+    real_time_duration_input.disabled = False
     start_button.disabled = False
     stop_button.disabled = True
+    fast_forward_button.disabled = True
     export_button.disabled = False
 
     start_time = None
+    max_real_time = None
     export_message.object = "✅ Simulation terminée. Tu peux exporter les résultats."
 
 
@@ -306,6 +319,27 @@ def exporter_csv(event=None):
 
 
 export_button.on_click(exporter_csv)
+
+
+# --- Bouton d'accélération ---
+def fast_forward(event=None):
+    global sim
+    if sim and sim.running:
+        sim.run()
+        metrics = sim.get_metrics()
+        pdr_indicator.value = metrics["PDR"]
+        collisions_indicator.value = metrics["collisions"]
+        energy_indicator.value = metrics["energy_J"]
+        delay_indicator.value = metrics["avg_delay_s"]
+        sf_dist = metrics["sf_distribution"]
+        sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
+        sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
+        sf_hist_pane.object = sf_fig
+        update_map()
+        on_stop(None)
+
+
+fast_forward_button.on_click(fast_forward)
 
 
 # --- Case à cocher mobilité : pour mobilité à chaud, hors simulation ---
@@ -357,7 +391,8 @@ controls = pn.WidgetBox(
     mobility_checkbox,
     mobility_speed_min_input,
     mobility_speed_max_input,
-    pn.Row(start_button, stop_button),
+    real_time_duration_input,
+    pn.Row(start_button, stop_button, fast_forward_button),
     export_button,
     export_message,
 )

@@ -9,9 +9,11 @@ class Channel:
         frequency_hz: float = 868e6,
         path_loss_exp: float = 2.7,
         shadowing_std: float = 6.0,
+        fast_fading_std: float = 0.0,
         cable_loss_dB: float = 0.0,
         receiver_noise_floor_dBm: float = -174.0,
         noise_figure_dB: float = 6.0,
+        noise_floor_std: float = 0.0,
     ):
         """
         Initialise le canal radio avec paramètres de propagation.
@@ -19,17 +21,22 @@ class Channel:
         :param frequency_hz: Fréquence en Hz (par défaut 868 MHz).
         :param path_loss_exp: Exposant de perte de parcours (log-distance).
         :param shadowing_std: Écart-type du shadowing (variations aléatoires en dB), 0 pour ignorer.
+        :param fast_fading_std: Variation rapide de l'amplitude (dB) pour simuler le fading multipath.
         :param cable_loss_dB: Pertes fixes dues au câble/connectique (dB).
         :param receiver_noise_floor_dBm: Niveau de bruit thermique de référence (dBm/Hz).
         :param noise_figure_dB: Facteur de bruit ajouté par le récepteur (dB).
+        :param noise_floor_std: Écart-type de la variation aléatoire du bruit
+            (dB). Utile pour modéliser un canal plus dynamique.
         """
 
         self.frequency_hz = frequency_hz
         self.path_loss_exp = path_loss_exp
         self.shadowing_std = shadowing_std  # σ en dB (ex: 6.0 pour environnement urbain/suburbain)
+        self.fast_fading_std = fast_fading_std
         self.cable_loss_dB = cable_loss_dB
         self.receiver_noise_floor_dBm = receiver_noise_floor_dBm
         self.noise_figure_dB = noise_figure_dB
+        self.noise_floor_std = noise_floor_std
 
         # Paramètres LoRa (BW 125 kHz, CR 4/5, préambule 8, CRC activé)
         self.bandwidth = 125e3  # 125 kHz
@@ -50,9 +57,16 @@ class Channel:
         self.capture_threshold_dB = 6.0
 
     def noise_floor_dBm(self) -> float:
-        """Retourne le niveau de bruit (dBm) pour la bande passante configurée."""
+        """Retourne le niveau de bruit (dBm) pour la bande passante configurée.
+
+        Le bruit peut varier autour de la valeur moyenne pour simuler un canal
+        plus réaliste.
+        """
         thermal = self.receiver_noise_floor_dBm + 10 * math.log10(self.bandwidth)
-        return thermal + self.noise_figure_dB
+        noise = thermal + self.noise_figure_dB
+        if self.noise_floor_std > 0:
+            noise += random.gauss(0, self.noise_floor_std)
+        return noise
 
     def path_loss(self, distance: float) -> float:
         """Calcule la perte de parcours (en dB) pour une distance donnée (m)."""
@@ -75,6 +89,8 @@ class Channel:
             loss += random.gauss(0, self.shadowing_std)
         # RSSI = P_tx - pertes - pertes câble
         rssi = tx_power_dBm - loss - self.cable_loss_dB
+        if self.fast_fading_std > 0:
+            rssi += random.gauss(0, self.fast_fading_std)
         snr = rssi - self.noise_floor_dBm()
         return rssi, snr
 

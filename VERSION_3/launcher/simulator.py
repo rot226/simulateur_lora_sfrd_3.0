@@ -287,6 +287,8 @@ class Simulator:
                 'end_time': end_time,
                 'energy_J': energy_J,
                 'heard': heard_by_any,
+                'rssi_dBm': best_rssi,
+                'snr_dB': best_snr,
                 'result': None,
                 'gateway_id': None
             })
@@ -430,7 +432,9 @@ class Simulator:
                     'heard': None,
                     'result': 'Mobility',
                     'energy_J': 0.0,
-                    'gateway_id': None
+                    'gateway_id': None,
+                    'rssi_dBm': None,
+                    'snr_dB': None
                 })
                 if self.mobility_enabled and (self.packets_to_send == 0 or self.packets_sent < self.packets_to_send):
                     self.schedule_mobility(node, time + self.mobility_model.step)
@@ -487,11 +491,20 @@ class Simulator:
         df['final_sf'] = df['node_id'].apply(lambda nid: node_dict[nid].sf)
         df['initial_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_tx_power)
         df['final_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].tx_power)
+        df['packets_sent'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_sent)
+        df['packets_success'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_success)
+        df['packets_collision'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_collision)
+        df['energy_consumed_J_node'] = df['node_id'].apply(lambda nid: node_dict[nid].energy_consumed)
+        df['downlink_pending'] = df['node_id'].apply(lambda nid: node_dict[nid].downlink_pending)
+        df['acks_received'] = df['node_id'].apply(lambda nid: node_dict[nid].acks_received)
         # Colonnes d'intérêt dans un ordre lisible
         columns_order = [
             'event_id', 'node_id', 'initial_x', 'initial_y', 'final_x', 'final_y',
             'initial_sf', 'final_sf', 'initial_tx_power', 'final_tx_power',
-            'start_time', 'end_time', 'energy_J', 'result', 'gateway_id'
+            'packets_sent', 'packets_success', 'packets_collision',
+            'energy_consumed_J_node', 'downlink_pending', 'acks_received',
+            'start_time', 'end_time', 'energy_J', 'rssi_dBm', 'snr_dB',
+            'result', 'gateway_id'
         ]
         for col in columns_order:
             if col not in df.columns:

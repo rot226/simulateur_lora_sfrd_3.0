@@ -75,6 +75,8 @@ class Node:
         self.current_end_time: float | None = None
         self.last_rssi: float | None = None
         self.last_snr: float | None = None
+        self.downlink_pending: int = 0
+        self.acks_received: int = 0
 
     def distance_to(self, other) -> float:
         """
@@ -114,7 +116,9 @@ class Node:
             'energy_consumed_J': self.energy_consumed,
             'packets_sent': self.packets_sent,
             'packets_success': self.packets_success,
-            'packets_collision': self.packets_collision
+            'packets_collision': self.packets_collision,
+            'downlink_pending': self.downlink_pending,
+            'acks_received': self.acks_received
         }
 
     def increment_sent(self):
@@ -163,6 +167,9 @@ class Node:
         self.fcnt_down = frame.fcnt + 1
         if frame.confirmed:
             self.awaiting_ack = False
+            self.acks_received += 1
+
+        self.downlink_pending = max(0, self.downlink_pending - 1)
 
         if isinstance(frame.payload, bytes):
             if len(frame.payload) >= 5 and frame.payload[0] == 0x03:

@@ -50,6 +50,10 @@ class NetworkServer:
             frame.payload = LinkADRReq(dr, p_idx).to_bytes()
         node.fcnt_down += 1
         gw.buffer_downlink(node.id, frame)
+        try:
+            node.downlink_pending += 1
+        except AttributeError:
+            pass
 
     def receive(self, event_id: int, node_id: int, gateway_id: int, rssi: float | None = None):
         """

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import random
 
 # Allow importing the VERSION_3 package from the repository root
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,8 +20,6 @@ from VERSION_3.launcher.lorawan import (  # noqa: E402
     LinkCheckAns,
     DeviceTimeReq,
 )
-
-import random
 
 
 def test_channel_compute_rssi_and_airtime():

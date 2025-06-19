@@ -1,4 +1,3 @@
-import math
 import heapq
 import logging
 import random
@@ -173,8 +172,9 @@ class Simulator:
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
                 self.schedule_mobility(node, self.mobility_model.step)
-            if node.class_type.upper() in ('B', 'C'):
-                eid = self.event_id_counter; self.event_id_counter += 1
+            if node.class_type.upper() in ("B", "C"):
+                eid = self.event_id_counter
+                self.event_id_counter += 1
                 heapq.heappush(self.event_queue, (0.0, 3, eid, node))
         
         # Indicateur d'exécution de la simulation
@@ -275,9 +275,11 @@ class Simulator:
             heapq.heappush(self.event_queue, (end_time, 0, event_id, node))
             # Planifier les fenêtres de réception LoRaWAN
             rx1, rx2 = node.schedule_receive_windows(end_time)
-            ev1 = self.event_id_counter; self.event_id_counter += 1
+            ev1 = self.event_id_counter
+            self.event_id_counter += 1
             heapq.heappush(self.event_queue, (rx1, 3, ev1, node))
-            ev2 = self.event_id_counter; self.event_id_counter += 1
+            ev2 = self.event_id_counter
+            self.event_id_counter += 1
             heapq.heappush(self.event_queue, (rx2, 3, ev2, node))
             # Planifier la prochaine transmission de ce nœud (selon le mode), sauf si limite atteinte
             if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
@@ -427,13 +429,15 @@ class Simulator:
                 selected_gw = gw
                 break
             # Replanifier selon la classe du nœud
-            if node.class_type.upper() == 'B':
+            if node.class_type.upper() == "B":
                 nxt = time + 30.0
-                eid = self.event_id_counter; self.event_id_counter += 1
+                eid = self.event_id_counter
+                self.event_id_counter += 1
                 heapq.heappush(self.event_queue, (nxt, 3, eid, node))
-            elif node.class_type.upper() == 'C' and selected_gw and selected_gw.downlink_buffer.get(node.id):
+            elif node.class_type.upper() == "C" and selected_gw and selected_gw.downlink_buffer.get(node.id):
                 nxt = time + 1.0
-                eid = self.event_id_counter; self.event_id_counter += 1
+                eid = self.event_id_counter
+                self.event_id_counter += 1
                 heapq.heappush(self.event_queue, (nxt, 3, eid, node))
             return True
 

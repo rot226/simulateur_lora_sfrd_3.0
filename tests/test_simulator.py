@@ -8,12 +8,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from VERSION_3.launcher.channel import Channel
-from VERSION_3.launcher.simulator import Simulator
-from VERSION_3.launcher.node import Node
-from VERSION_3.launcher.gateway import Gateway
-from VERSION_3.launcher.server import NetworkServer
-from VERSION_3.launcher.lorawan import (
+from VERSION_3.launcher.channel import Channel  # noqa: E402
+from VERSION_3.launcher.simulator import Simulator  # noqa: E402
+from VERSION_3.launcher.node import Node  # noqa: E402
+from VERSION_3.launcher.gateway import Gateway  # noqa: E402
+from VERSION_3.launcher.server import NetworkServer  # noqa: E402
+from VERSION_3.launcher.lorawan import (  # noqa: E402
     LinkADRAns,
     LinkCheckReq,
     LinkCheckAns,

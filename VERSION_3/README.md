@@ -93,3 +93,7 @@ Lancer l'exemple minimal :
 python run.py --lorawan-demo
 ```
  
+
+## Licence
+
+Ce projet est distribué sous licence MIT. Voir le fichier [LICENSE](../LICENSE) pour plus de détails.

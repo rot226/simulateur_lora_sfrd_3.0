@@ -136,7 +136,7 @@ class Simulator:
             y = random.random() * area_size
             sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)
             tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
-            channel = self.multichannel.select()
+            channel = self.multichannel.select_mask(0xFFFF)
             node = Node(node_id, x, y, sf, tx_power, channel=channel,
                         battery_capacity_j=self.battery_capacity_j)
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
@@ -209,6 +209,7 @@ class Simulator:
         self.event_id_counter += 1
         if self.duty_cycle_manager:
             time = self.duty_cycle_manager.enforce(node.id, time)
+        node.channel = self.multichannel.select_mask(getattr(node, "chmask", 0xFFFF))
         heapq.heappush(
             self.event_queue,
             Event(time, EventType.TX_START, event_id, node.id),
@@ -252,6 +253,9 @@ class Simulator:
         if priority == EventType.TX_START:
             # Début d'une transmission émise par 'node'
             node_id = node.id
+            if node._nb_trans_left <= 0:
+                node._nb_trans_left = max(1, node.nb_trans)
+            node._nb_trans_left -= 1
             sf = node.sf
             tx_power = node.tx_power
             # Durée de la transmission
@@ -327,24 +331,6 @@ class Simulator:
                 self.event_queue,
                 Event(rx2, EventType.RX_WINDOW, ev2, node.id),
             )
-            # Planifier la prochaine transmission de ce nœud (selon le mode), sauf si limite atteinte
-            if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
-                if self.transmission_mode.lower() == 'random':
-                    next_interval = random.expovariate(1.0 / self.packet_interval)
-                else:
-                    next_interval = self.packet_interval
-                next_time = end_time + next_interval
-                self.schedule_event(node, next_time)
-            else:
-                # Limite de paquets atteinte: ne plus planifier de nouvelles transmissions
-                new_queue = []
-                for evt in self.event_queue:
-                    # Conserver uniquement les fins de transmissions en cours
-                    if evt.type == EventType.TX_END:
-                        new_queue.append(evt)
-                heapq.heapify(new_queue)
-                self.event_queue = new_queue
-                logger.debug("Packet limit reached – no more new events will be scheduled.")
             
             # Journaliser l'événement de transmission (résultat inconnu à ce stade)
             self.events_log.append({
@@ -436,6 +422,27 @@ class Simulator:
                         logger.debug(
                             f"Requête ADR du nœud {node.id} ignorée (ADR serveur désactivé)."
                         )
+
+            # Planifier retransmissions restantes ou prochaine émission
+            if node._nb_trans_left > 0:
+                self.schedule_event(node, self.current_time + 1.0)
+            else:
+                if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
+                    if self.transmission_mode.lower() == 'random':
+                        next_interval = random.expovariate(1.0 / self.packet_interval)
+                    else:
+                        next_interval = self.packet_interval
+                    next_time = self.current_time + next_interval
+                    self.schedule_event(node, next_time)
+                else:
+                    new_queue = []
+                    for evt in self.event_queue:
+                        if evt.type == EventType.TX_END:
+                            new_queue.append(evt)
+                    heapq.heapify(new_queue)
+                    self.event_queue = new_queue
+                    logger.debug("Packet limit reached – no more new events will be scheduled.")
+
             return True
         
         elif priority == EventType.RX_WINDOW:

@@ -27,3 +27,16 @@ class MultiChannel:
         ch = self.channels[self._rr_index % len(self.channels)]
         self._rr_index += 1
         return ch
+
+    def select_mask(self, mask: int) -> Channel:
+        """Return a channel allowed by the ``mask`` (bit field)."""
+        allowed = [
+            ch for idx, ch in enumerate(self.channels) if mask & (1 << idx)
+        ]
+        if not allowed:
+            return self.select()
+        if self.method == "random":
+            return random.choice(allowed)
+        ch = allowed[self._rr_index % len(allowed)]
+        self._rr_index += 1
+        return ch

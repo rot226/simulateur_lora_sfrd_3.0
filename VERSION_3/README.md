@@ -115,7 +115,9 @@ Depuis cette version, la gestion ADR suit la spécification LoRaWAN : en plus d
 commandes `LinkADRReq`/`LinkADRAns`, les bits `ADRACKReq` et `ADR` sont pris en
 charge, le `ChMask` et le `NbTrans` influencent réellement les transmissions,
 le compteur `adr_ack_cnt` respecte le délai `ADR_ACK_DELAY` et le serveur
-répond automatiquement lorsqu'un équipement sollicite `ADRACKReq`.
+répond automatiquement lorsqu'un équipement sollicite `ADRACKReq`. Cette
+implémentation est complète et directement inspirée du modèle FLoRa,
+adaptée ici sous une forme plus légère sans OMNeT++.
 
 Lancer l'exemple minimal :
 

@@ -40,7 +40,7 @@ nœuds ». Si elle est décochée, les positions des nœuds restent fixes penda
 la simulation.
 Lorsque la mobilité est active, les déplacements sont progressifs et suivent
 des trajectoires lissées par interpolation de Bézier. La vitesse des nœuds est
-tirée aléatoirement dans la plage spécifiée (par défaut 2 à 5 m/s) et peut être
+tirée aléatoirement dans la plage spécifiée (par défaut 2 à 10 m/s) et peut être
 modifiée via le paramètre `mobility_speed` du `Simulator`. Les mouvements sont
 donc continus et sans téléportation.
 Deux champs « Vitesse min » et « Vitesse max » sont disponibles dans le

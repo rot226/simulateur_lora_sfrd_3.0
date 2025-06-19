@@ -31,7 +31,7 @@ class Simulator:
                  packets_to_send: int = 0, adr_node: bool = False, adr_server: bool = False,
                  duty_cycle: float | None = 0.01, mobility: bool = True,
                  channels=None, channel_distribution: str = "round-robin",
-                 mobility_speed: tuple[float, float] = (2.0, 5.0),
+                 mobility_speed: tuple[float, float] = (2.0, 10.0),
                  fixed_sf: int | None = None,
                  fixed_tx_power: float | None = None):
         """

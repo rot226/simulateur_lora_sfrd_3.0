@@ -1,6 +1,14 @@
 # node.py
 import math
 
+# Typical operating voltage (V)
+VOLTAGE_V = 3.3
+# Typical currents (A) based on Semtech datasheets
+SLEEP_CURRENT_A = 1e-6      # 1 µA in sleep
+RX_CURRENT_A = 11e-3        # ~11 mA in RX
+PROCESS_CURRENT_A = 5e-3    # ~5 mA for MCU processing
+RX_WINDOW_DURATION = 0.1    # duration of RX windows in seconds
+
 class Node:
     """
     Représente un nœud IoT (LoRa) dans la simulation, avec suivi complet des métriques de performance.
@@ -11,7 +19,11 @@ class Node:
         x (float), y (float) : Position courante du nœud (mètres).
         initial_sf (int), sf (int) : SF (spreading factor) initial et actuel du nœud.
         initial_tx_power (float), tx_power (float) : Puissance TX initiale et actuelle (dBm).
-        energy_consumed (float) : Énergie totale consommée en transmission (Joules).
+        energy_consumed (float) : Énergie totale consommée (toutes activités, Joules).
+        energy_tx (float) : Énergie dépensée lors des transmissions.
+        energy_rx (float) : Énergie dépensée en réception.
+        energy_sleep (float) : Énergie dépensée en veille.
+        energy_processing (float) : Énergie dépensée en traitement.
         packets_sent (int) : Nombre total de paquets émis par ce nœud.
         packets_success (int) : Nombre de paquets reçus avec succès.
         packets_collision (int) : Nombre de paquets perdus en raison de collisions.
@@ -47,6 +59,10 @@ class Node:
         
         # Énergie et compteurs de paquets
         self.energy_consumed = 0.0
+        self.energy_tx = 0.0
+        self.energy_rx = 0.0
+        self.energy_sleep = 0.0
+        self.energy_processing = 0.0
         self.packets_sent = 0
         self.packets_success = 0
         self.packets_collision = 0
@@ -78,6 +94,10 @@ class Node:
         self.last_snr: float | None = None
         self.downlink_pending: int = 0
         self.acks_received: int = 0
+
+        # Energy accounting state
+        self.last_state_time = 0.0
+        self.state = 'sleep'
 
     def distance_to(self, other) -> float:
         """
@@ -114,6 +134,10 @@ class Node:
             'final_sf': self.sf,
             'initial_tx_power': self.initial_tx_power,
             'final_tx_power': self.tx_power,
+            'energy_tx_J': self.energy_tx,
+            'energy_rx_J': self.energy_rx,
+            'energy_sleep_J': self.energy_sleep,
+            'energy_processing_J': self.energy_processing,
             'energy_consumed_J': self.energy_consumed,
             'packets_sent': self.packets_sent,
             'packets_success': self.packets_success,
@@ -152,13 +176,31 @@ class Node:
         success = sum(1 for e in self.history if e.get('delivered'))
         return success / total
 
-    def add_energy(self, energy_joules: float):
-        """
-        Ajoute de l'énergie consommée en transmission.
-
-        :param energy_joules: Énergie (J) dépensée lors de l'envoi d'un paquet.
-        """
+    def add_energy(self, energy_joules: float, state: str = "tx"):
+        """Ajoute de l'énergie consommée pour un état donné."""
         self.energy_consumed += energy_joules
+        if state == "tx":
+            self.energy_tx += energy_joules
+        elif state == "rx":
+            self.energy_rx += energy_joules
+        elif state == "sleep":
+            self.energy_sleep += energy_joules
+        elif state == "processing":
+            self.energy_processing += energy_joules
+
+    def consume_until(self, current_time: float) -> None:
+        """Accumulates energy from ``last_state_time`` up to ``current_time``."""
+        dt = current_time - self.last_state_time
+        if dt <= 0:
+            self.last_state_time = current_time
+            return
+        if self.state == "sleep":
+            self.add_energy(SLEEP_CURRENT_A * VOLTAGE_V * dt, "sleep")
+        elif self.state == "rx":
+            self.add_energy(RX_CURRENT_A * VOLTAGE_V * dt, "rx")
+        elif self.state == "processing":
+            self.add_energy(PROCESS_CURRENT_A * VOLTAGE_V * dt, "processing")
+        self.last_state_time = current_time
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods

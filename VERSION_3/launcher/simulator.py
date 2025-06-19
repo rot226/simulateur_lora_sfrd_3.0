@@ -8,7 +8,12 @@ try:
 except Exception:  # pragma: no cover - pandas optional
     pd = None
 
-from .node import Node
+from .node import (
+    Node,
+    RX_CURRENT_A,
+    VOLTAGE_V,
+    RX_WINDOW_DURATION,
+)
 from .gateway import Gateway
 from .channel import Channel
 from .multichannel import MultiChannel
@@ -195,6 +200,7 @@ class Simulator:
         time, priority, event_id, node = heapq.heappop(self.event_queue)
         # Avancer le temps de simulation
         self.current_time = time
+        node.consume_until(time)
         
         if priority == 1:
             # Début d'une transmission émise par 'node'
@@ -213,7 +219,9 @@ class Simulator:
             p_mW = 10 ** (tx_power / 10.0)  # convertir dBm en mW
             energy_J = (p_mW / 1000.0) * duration
             self.total_energy_J += energy_J
-            node.add_energy(energy_J)
+            node.add_energy(energy_J, "tx")
+            node.state = "tx"
+            node.last_state_time = time
             # Marquer le nœud comme en cours de transmission
             node.in_transmission = True
             node.current_end_time = end_time
@@ -300,6 +308,7 @@ class Simulator:
             # Marquer la fin de transmission du nœud
             node.in_transmission = False
             node.current_end_time = None
+            node.state = "processing"
             # Notifier chaque passerelle de la fin de réception
             for gw in self.gateways:
                 gw.end_reception(event_id, self.network_server, node_id)
@@ -385,6 +394,9 @@ class Simulator:
         
         elif priority == 3:
             # Fenêtre de réception RX1/RX2 pour un nœud
+            node.add_energy(RX_CURRENT_A * VOLTAGE_V * RX_WINDOW_DURATION, "rx")
+            node.last_state_time = time + RX_WINDOW_DURATION
+            node.state = "sleep"
             selected_gw = None
             for gw in self.gateways:
                 frame = gw.pop_downlink(node.id)

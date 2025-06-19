@@ -73,7 +73,7 @@ Le tableau de bord permet maintenant de fixer une **durée réelle maximale** en
 
 ## Suivi de batterie
 
-Chaque nœud peut être doté d'une capacité d'énergie (en joules) grâce au paramètre `battery_capacity_j` du `Simulator`. La consommation est retranchée de cette réserve et le champ `battery_remaining_j` indique l'autonomie restante.
+Chaque nœud peut être doté d'une capacité d'énergie (en joules) grâce au paramètre `battery_capacity_j` du `Simulator`. La consommation est calculée selon le profil d'énergie FLoRa (courants typiques en veille, réception, etc.) puis retranchée de cette réserve. Le champ `battery_remaining_j` indique l'autonomie restante.
 
 ## Paramètres radio avancés
 

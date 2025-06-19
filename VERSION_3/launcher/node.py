@@ -1,13 +1,10 @@
 # node.py
 import math
 
-# Typical operating voltage (V)
-VOLTAGE_V = 3.3
-# Typical currents (A) based on Semtech datasheets
-SLEEP_CURRENT_A = 1e-6      # 1 µA in sleep
-RX_CURRENT_A = 11e-3        # ~11 mA in RX
-PROCESS_CURRENT_A = 5e-3    # ~5 mA for MCU processing
-RX_WINDOW_DURATION = 0.1    # duration of RX windows in seconds
+from .energy_profiles import EnergyProfile, FLORA_PROFILE
+
+# Default energy profile used by all nodes (based on the FLoRa model)
+DEFAULT_ENERGY_PROFILE = FLORA_PROFILE
 
 class Node:
     """
@@ -35,7 +32,8 @@ class Node:
 
     def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float,
                  channel=None, devaddr: int | None = None, class_type: str = 'A',
-                 battery_capacity_j: float | None = None):
+                 battery_capacity_j: float | None = None,
+                 energy_profile: EnergyProfile | None = None):
         """
         Initialise le nœud avec ses paramètres de départ.
 
@@ -46,6 +44,8 @@ class Node:
         :param tx_power: Puissance d'émission initiale (dBm).
         :param battery_capacity_j: Capacité totale de la batterie en joules
             (``None`` pour capacité illimitée).
+        :param energy_profile: Paramètres de consommation d'énergie (profil
+            FLoRa par défaut).
         """
         # Identité et paramètres initiaux
         self.id = node_id
@@ -59,6 +59,9 @@ class Node:
         self.tx_power = tx_power
         # Canal radio attribué (peut être modifié par le simulateur)
         self.channel = channel
+
+        # Profil énergétique utilisé pour calculer la consommation
+        self.profile = energy_profile or DEFAULT_ENERGY_PROFILE
         
         # Énergie et compteurs de paquets
         self.energy_consumed = 0.0
@@ -218,11 +221,20 @@ class Node:
             self.last_state_time = current_time
             return
         if self.state == "sleep":
-            self.add_energy(SLEEP_CURRENT_A * VOLTAGE_V * dt, "sleep")
+            self.add_energy(
+                self.profile.sleep_current_a * self.profile.voltage_v * dt,
+                "sleep",
+            )
         elif self.state == "rx":
-            self.add_energy(RX_CURRENT_A * VOLTAGE_V * dt, "rx")
+            self.add_energy(
+                self.profile.rx_current_a * self.profile.voltage_v * dt,
+                "rx",
+            )
         elif self.state == "processing":
-            self.add_energy(PROCESS_CURRENT_A * VOLTAGE_V * dt, "processing")
+            self.add_energy(
+                self.profile.process_current_a * self.profile.voltage_v * dt,
+                "processing",
+            )
         self.last_state_time = current_time
 
     # ------------------------------------------------------------------

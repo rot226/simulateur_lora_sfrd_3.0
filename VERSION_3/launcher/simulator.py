@@ -7,12 +7,7 @@ try:
 except Exception:  # pragma: no cover - pandas optional
     pd = None
 
-from .node import (
-    Node,
-    RX_CURRENT_A,
-    VOLTAGE_V,
-    RX_WINDOW_DURATION,
-)
+from .node import Node
 from .gateway import Gateway
 from .channel import Channel
 from .multichannel import MultiChannel
@@ -408,10 +403,15 @@ class Simulator:
         
         elif priority == 3:
             # Fenêtre de réception RX1/RX2 pour un nœud
-            node.add_energy(RX_CURRENT_A * VOLTAGE_V * RX_WINDOW_DURATION, "rx")
+            node.add_energy(
+                node.profile.rx_current_a
+                * node.profile.voltage_v
+                * node.profile.rx_window_duration,
+                "rx",
+            )
             if not node.alive:
                 return True
-            node.last_state_time = time + RX_WINDOW_DURATION
+            node.last_state_time = time + node.profile.rx_window_duration
             node.state = "sleep"
             selected_gw = None
             for gw in self.gateways:

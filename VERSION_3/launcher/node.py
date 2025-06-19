@@ -3,11 +3,33 @@ import math
 
 # Typical operating voltage (V)
 VOLTAGE_V = 3.3
-# Typical currents (A) based on Semtech datasheets
+# Default currents (A) based on Semtech datasheets
 SLEEP_CURRENT_A = 1e-6      # 1 µA in sleep
 RX_CURRENT_A = 11e-3        # ~11 mA in RX
 PROCESS_CURRENT_A = 5e-3    # ~5 mA for MCU processing
 RX_WINDOW_DURATION = 0.1    # duration of RX windows in seconds
+
+# Approximate FLoRa profile values. These numbers are loosely based on
+# typical SX127x characteristics used by the FLoRa model. They allow the
+# simulator to more closely match the energy behaviour of FLoRa without
+# depending on the OMNeT++ code.
+FLO_RA_PROFILE = {
+    'voltage_v': 3.3,
+    'sleep_current_a': 1e-6,
+    'rx_current_a': 11e-3,
+    'process_current_a': 2e-3,  # microcontroller processing
+    'rx_window_duration': 1.0,
+    # TX current by power level in dBm
+    'tx_currents_a': {
+        2: 24e-3,
+        5: 30e-3,
+        8: 35e-3,
+        11: 44e-3,
+        14: 87e-3,
+        17: 120e-3,
+        20: 150e-3,
+    },
+}
 
 class Node:
     """
@@ -34,15 +56,20 @@ class Node:
     """
 
     def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float,
-                 channel=None, devaddr: int | None = None, class_type: str = 'A'):
+                 channel=None, devaddr: int | None = None, class_type: str = 'A',
+                 profile: str | dict | None = None):
         """
-        Initialise le nœud avec ses paramètres de départ.
+        Initialise le nœud avec ses paramètres de départ. Le paramètre
+        ``profile`` permet d'appliquer les valeurs d'énergie d'un profil
+        spécifique (par ex. ``"flora"``) ou un dictionnaire personnalisé.
         
         :param node_id: Identifiant du nœud.
         :param x: Position X initiale (mètres).
         :param y: Position Y initiale (mètres).
         :param sf: Spreading Factor initial (entre 7 et 12).
         :param tx_power: Puissance d'émission initiale (dBm).
+        :param profile: Nom du profil d'énergie à utiliser ou dictionnaire
+            personnalisé. ``None`` applique les constantes par défaut.
         """
         # Identité et paramètres initiaux
         self.id = node_id
@@ -56,6 +83,30 @@ class Node:
         self.tx_power = tx_power
         # Canal radio attribué (peut être modifié par le simulateur)
         self.channel = channel
+
+        # --------------------------------------------------------------
+        # Energy profile configuration
+        # --------------------------------------------------------------
+        if profile == 'flora':
+            p = FLO_RA_PROFILE
+        elif isinstance(profile, dict):
+            p = {**FLO_RA_PROFILE, **profile}
+        else:
+            p = {
+                'voltage_v': VOLTAGE_V,
+                'sleep_current_a': SLEEP_CURRENT_A,
+                'rx_current_a': RX_CURRENT_A,
+                'process_current_a': PROCESS_CURRENT_A,
+                'rx_window_duration': RX_WINDOW_DURATION,
+                'tx_currents_a': None,
+            }
+
+        self.voltage_v = p['voltage_v']
+        self.sleep_current_a = p['sleep_current_a']
+        self.rx_current_a = p['rx_current_a']
+        self.process_current_a = p['process_current_a']
+        self.rx_window_duration = p['rx_window_duration']
+        self.tx_currents = p['tx_currents_a']
         
         # Énergie et compteurs de paquets
         self.energy_consumed = 0.0
@@ -195,12 +246,26 @@ class Node:
             self.last_state_time = current_time
             return
         if self.state == "sleep":
-            self.add_energy(SLEEP_CURRENT_A * VOLTAGE_V * dt, "sleep")
+            self.add_energy(self.sleep_current_a * self.voltage_v * dt, "sleep")
         elif self.state == "rx":
-            self.add_energy(RX_CURRENT_A * VOLTAGE_V * dt, "rx")
+            self.add_energy(self.rx_current_a * self.voltage_v * dt, "rx")
         elif self.state == "processing":
-            self.add_energy(PROCESS_CURRENT_A * VOLTAGE_V * dt, "processing")
+            self.add_energy(self.process_current_a * self.voltage_v * dt, "processing")
         self.last_state_time = current_time
+
+    # --------------------------------------------------------------
+    # Energy helpers
+    # --------------------------------------------------------------
+    def tx_current(self, tx_power_dbm: float) -> float:
+        """Return the transmit current for the given power in dBm."""
+        if self.tx_currents:
+            key = int(round(tx_power_dbm))
+            if key in self.tx_currents:
+                return self.tx_currents[key]
+            closest = min(self.tx_currents.keys(), key=lambda k: abs(k - key))
+            return self.tx_currents[closest]
+        p_mw = 10 ** (tx_power_dbm / 10.0)
+        return p_mw / (self.voltage_v * 1000.0)
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods

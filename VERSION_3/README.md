@@ -86,6 +86,16 @@ réception :
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 `Channel.compute_rssi`.
 
+## Profils d'énergie FLoRa
+
+Depuis cette version, les nœuds peuvent adopter un profil d'énergie plus
+réaliste inspiré du modèle **FLoRa** d'OMNeT++. Il suffit de passer
+`profile="flora"` au constructeur de `Node` ou via les options du
+`Simulator`. Les courants de veille, de réception et de transmission sont
+alors ajustés pour reproduire les comportements de FLoRa (périodes de
+veille prolongées et écoute des fenêtres **RX1/RX2** d'une seconde par
+défaut).
+
 ## SF et puissance initiaux
 
 Deux nouvelles cases à cocher du tableau de bord permettent de fixer le

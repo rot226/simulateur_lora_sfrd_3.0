@@ -8,12 +8,7 @@ try:
 except Exception:  # pragma: no cover - pandas optional
     pd = None
 
-from .node import (
-    Node,
-    RX_CURRENT_A,
-    VOLTAGE_V,
-    RX_WINDOW_DURATION,
-)
+from .node import Node
 from .gateway import Gateway
 from .channel import Channel
 from .multichannel import MultiChannel
@@ -215,9 +210,9 @@ class Simulator:
             # Mettre à jour les compteurs de paquets émis
             self.packets_sent += 1
             node.increment_sent()
-            # Énergie consommée par la transmission (E = P(mW) * t)
-            p_mW = 10 ** (tx_power / 10.0)  # convertir dBm en mW
-            energy_J = (p_mW / 1000.0) * duration
+            # Énergie consommée par la transmission
+            tx_current = node.tx_current(tx_power)
+            energy_J = tx_current * node.voltage_v * duration
             self.total_energy_J += energy_J
             node.add_energy(energy_J, "tx")
             node.state = "tx"
@@ -394,8 +389,8 @@ class Simulator:
         
         elif priority == 3:
             # Fenêtre de réception RX1/RX2 pour un nœud
-            node.add_energy(RX_CURRENT_A * VOLTAGE_V * RX_WINDOW_DURATION, "rx")
-            node.last_state_time = time + RX_WINDOW_DURATION
+            node.add_energy(node.rx_current_a * node.voltage_v * node.rx_window_duration, "rx")
+            node.last_state_time = time + node.rx_window_duration
             node.state = "sleep"
             selected_gw = None
             for gw in self.gateways:

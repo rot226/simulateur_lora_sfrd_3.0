@@ -9,6 +9,7 @@ This repository contains a lightweight LoRa network simulator implemented in Pyt
 - Advanced channel model with loss and noise parameters
 - Initial spreading factor and power selection
 - Basic LoRaWAN layer with LinkADRReq/LinkADRAns
+- Optional FLoRa energy profile with realistic sleep and RX windows
 
 ## Quick start
 

@@ -1,6 +1,8 @@
 import heapq
 import logging
 import random
+from dataclasses import dataclass, field
+from enum import IntEnum
 
 try:
     import pandas as pd
@@ -15,6 +17,23 @@ from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
+
+
+class EventType(IntEnum):
+    """Types d'événements traités par le simulateur."""
+
+    TX_END = 0
+    TX_START = 1
+    MOBILITY = 2
+    RX_WINDOW = 3
+
+
+@dataclass(order=True, slots=True)
+class Event:
+    time: float
+    type: int
+    id: int
+    node_id: int
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +158,8 @@ class Simulator:
         self.network_server.channel = self.channel
         
         # File d'événements (min-heap)
-        self.event_queue: list[tuple[float, int, int, Node]] = []
+        self.event_queue: list[Event] = []
+        self.node_map = {node.id: node for node in self.nodes}
         self.current_time = 0.0
         self.event_id_counter = 0
         
@@ -170,7 +190,10 @@ class Simulator:
             if node.class_type.upper() in ("B", "C"):
                 eid = self.event_id_counter
                 self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (0.0, 3, eid, node))
+                heapq.heappush(
+                    self.event_queue,
+                    Event(0.0, EventType.RX_WINDOW, eid, node.id),
+                )
         
         # Indicateur d'exécution de la simulation
         self.running = True
@@ -183,8 +206,13 @@ class Simulator:
         self.event_id_counter += 1
         if self.duty_cycle_manager:
             time = self.duty_cycle_manager.enforce(node.id, time)
-        heapq.heappush(self.event_queue, (time, 1, event_id, node))
-        logger.debug(f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s")
+        heapq.heappush(
+            self.event_queue,
+            Event(time, EventType.TX_START, event_id, node.id),
+        )
+        logger.debug(
+            f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s"
+        )
     
     def schedule_mobility(self, node: Node, time: float):
         """Planifie un événement de mobilité (déplacement aléatoire) pour un nœud à l'instant donné."""
@@ -192,22 +220,33 @@ class Simulator:
             return
         event_id = self.event_id_counter
         self.event_id_counter += 1
-        heapq.heappush(self.event_queue, (time, 2, event_id, node))
-        logger.debug(f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s")
+        heapq.heappush(
+            self.event_queue,
+            Event(time, EventType.MOBILITY, event_id, node.id),
+        )
+        logger.debug(
+            f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s"
+        )
     
     def step(self) -> bool:
         """Exécute le prochain événement planifié. Retourne False si plus d'événement à traiter."""
         if not self.running or not self.event_queue:
             return False
         # Extraire le prochain événement (le plus tôt dans le temps)
-        time, priority, event_id, node = heapq.heappop(self.event_queue)
+        event = heapq.heappop(self.event_queue)
+        time = event.time
+        priority = event.type
+        event_id = event.id
+        node = self.node_map.get(event.node_id)
+        if node is None:
+            return True
         # Avancer le temps de simulation
         self.current_time = time
         node.consume_until(time)
         if not node.alive:
             return True
         
-        if priority == 1:
+        if priority == EventType.TX_START:
             # Début d'une transmission émise par 'node'
             node_id = node.id
             sf = node.sf
@@ -267,15 +306,24 @@ class Simulator:
             node.last_rssi = best_rssi if heard_by_any else None
             node.last_snr = best_snr if heard_by_any else None
             # Planifier l'événement de fin de transmission correspondant
-            heapq.heappush(self.event_queue, (end_time, 0, event_id, node))
+            heapq.heappush(
+                self.event_queue,
+                Event(end_time, EventType.TX_END, event_id, node.id),
+            )
             # Planifier les fenêtres de réception LoRaWAN
             rx1, rx2 = node.schedule_receive_windows(end_time)
             ev1 = self.event_id_counter
             self.event_id_counter += 1
-            heapq.heappush(self.event_queue, (rx1, 3, ev1, node))
+            heapq.heappush(
+                self.event_queue,
+                Event(rx1, EventType.RX_WINDOW, ev1, node.id),
+            )
             ev2 = self.event_id_counter
             self.event_id_counter += 1
-            heapq.heappush(self.event_queue, (rx2, 3, ev2, node))
+            heapq.heappush(
+                self.event_queue,
+                Event(rx2, EventType.RX_WINDOW, ev2, node.id),
+            )
             # Planifier la prochaine transmission de ce nœud (selon le mode), sauf si limite atteinte
             if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
                 if self.transmission_mode.lower() == 'random':
@@ -288,8 +336,8 @@ class Simulator:
                 # Limite de paquets atteinte: ne plus planifier de nouvelles transmissions
                 new_queue = []
                 for evt in self.event_queue:
-                    # Conserver uniquement les fins de transmissions en cours (priority 0)
-                    if evt[1] == 0:
+                    # Conserver uniquement les fins de transmissions en cours
+                    if evt.type == EventType.TX_END:
                         new_queue.append(evt)
                 heapq.heapify(new_queue)
                 self.event_queue = new_queue
@@ -311,7 +359,7 @@ class Simulator:
             })
             return True
         
-        elif priority == 0:
+        elif priority == EventType.TX_END:
             # Fin d'une transmission – traitement de la réception/perte
             node_id = node.id
             # Marquer la fin de transmission du nœud
@@ -401,7 +449,7 @@ class Simulator:
                         logger.debug(f"Requête ADR du nœud {node.id} ignorée (ADR serveur désactivé).")
             return True
         
-        elif priority == 3:
+        elif priority == EventType.RX_WINDOW:
             # Fenêtre de réception RX1/RX2 pour un nœud
             node.add_energy(
                 node.profile.rx_current_a
@@ -433,15 +481,21 @@ class Simulator:
                 nxt = time + 30.0
                 eid = self.event_id_counter
                 self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (nxt, 3, eid, node))
+                heapq.heappush(
+                    self.event_queue,
+                    Event(nxt, EventType.RX_WINDOW, eid, node.id),
+                )
             elif node.class_type.upper() == "C" and selected_gw and selected_gw.downlink_buffer.get(node.id):
                 nxt = time + 1.0
                 eid = self.event_id_counter
                 self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (nxt, 3, eid, node))
+                heapq.heappush(
+                    self.event_queue,
+                    Event(nxt, EventType.RX_WINDOW, eid, node.id),
+                )
             return True
 
-        elif priority == 2:
+        elif priority == EventType.MOBILITY:
             # Événement de mobilité (changement de position du nœud)
             if not self.mobility_enabled:
                 return True

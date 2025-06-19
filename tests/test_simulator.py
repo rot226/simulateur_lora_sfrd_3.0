@@ -177,3 +177,40 @@ def test_sim_run_and_step_equivalence():
     ]
     for key in keys:
         assert metrics_run[key] == pytest.approx(metrics_step[key])
+
+
+def test_get_events_dataframe_has_all_columns():
+    pd = pytest.importorskip("pandas")
+    sim = _make_sim(num_nodes=1, same_start=False)
+    sim.run()
+    df = sim.get_events_dataframe()
+    assert not df.empty
+    expected_columns = [
+        "event_id",
+        "node_id",
+        "initial_x",
+        "initial_y",
+        "final_x",
+        "final_y",
+        "initial_sf",
+        "final_sf",
+        "initial_tx_power",
+        "final_tx_power",
+        "packets_sent",
+        "packets_success",
+        "packets_collision",
+        "energy_consumed_J_node",
+        "battery_capacity_J",
+        "battery_remaining_J",
+        "downlink_pending",
+        "acks_received",
+        "start_time",
+        "end_time",
+        "energy_J",
+        "rssi_dBm",
+        "snr_dB",
+        "result",
+        "gateway_id",
+    ]
+    for col in expected_columns:
+        assert col in df.columns

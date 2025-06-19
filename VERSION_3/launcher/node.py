@@ -97,6 +97,14 @@ class Node:
         self.pending_mac_cmd = None
         self.need_downlink_ack = False
 
+        # ADR state (LoRaWAN specification)
+        self.adr = True
+        self.nb_trans = 1
+        self.chmask = 0xFFFF
+        self.adr_ack_cnt = 0
+        self.adr_ack_limit = 64
+        self.adr_ack_delay = 32
+
         # Additional state used by the simulator
         self.history: list[dict] = []
         self.rssi_history: list[float] = []
@@ -252,10 +260,16 @@ class Node:
 
         mhdr = 0x40 if not confirmed else 0x80
         fctrl = 0x20 if self.need_downlink_ack else 0
+        if self.adr:
+            fctrl |= 0x80
+            if self.adr_ack_cnt >= self.adr_ack_limit:
+                fctrl |= 0x40
         frame = LoRaWANFrame(
             mhdr=mhdr, fctrl=fctrl, fcnt=self.fcnt_up, payload=payload, confirmed=confirmed
         )
         self.fcnt_up += 1
+        if self.adr:
+            self.adr_ack_cnt += 1
         if confirmed:
             self.awaiting_ack = True
         self.need_downlink_ack = False
@@ -275,6 +289,8 @@ class Node:
         )
 
         self.fcnt_down = frame.fcnt + 1
+        if self.adr:
+            self.adr_ack_cnt = 0
         if frame.fctrl & 0x20:
             # ACK bit set -> the server acknowledged our last uplink
             self.awaiting_ack = False
@@ -292,6 +308,9 @@ class Node:
                     req = LinkADRReq.from_bytes(frame.payload[:5])
                     self.sf = DR_TO_SF.get(req.datarate, self.sf)
                     self.tx_power = TX_POWER_INDEX_TO_DBM.get(req.tx_power, self.tx_power)
+                    self.nb_trans = max(1, req.redundancy & 0x0F)
+                    self.chmask = req.chmask
+                    self.adr_ack_cnt = 0
                     self.pending_mac_cmd = LinkADRAns().to_bytes()
                 except Exception:
                     pass

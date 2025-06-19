@@ -171,8 +171,15 @@ def step_simulation():
     delay_indicator.value = metrics["avg_delay_s"]
     throughput_indicator.value = metrics["throughput_bps"]
     sf_dist = metrics["sf_distribution"]
-    sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
-    sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
+    sf_fig = go.Figure(
+        data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))]
+    )
+    sf_fig.update_layout(
+        title="Répartition des SF par nœud",
+        xaxis_title="SF",
+        yaxis_title="Nombre de nœuds",
+        yaxis_range=[0, sim.num_nodes],
+    )
     sf_hist_pane.object = sf_fig
     update_map()
     if not cont:
@@ -222,8 +229,15 @@ def on_start(event):
     delay_indicator.value = 0
     chrono_indicator.value = 0
     sf_counts = {sf: sum(1 for node in sim.nodes if node.sf == sf) for sf in range(7, 13)}
-    sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_counts.keys()], y=list(sf_counts.values()))])
-    sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
+    sf_fig = go.Figure(
+        data=[go.Bar(x=[f"SF{sf}" for sf in sf_counts.keys()], y=list(sf_counts.values()))]
+    )
+    sf_fig.update_layout(
+        title="Répartition des SF par nœud",
+        xaxis_title="SF",
+        yaxis_title="Nombre de nœuds",
+        yaxis_range=[0, sim.num_nodes],
+    )
     sf_hist_pane.object = sf_fig
     num_nodes_input.disabled = True
     num_gateways_input.disabled = True
@@ -360,11 +374,14 @@ def fast_forward(event=None):
                 delay_indicator.value = metrics["avg_delay_s"]
                 throughput_indicator.value = metrics["throughput_bps"]
                 sf_dist = metrics["sf_distribution"]
-                sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
+                sf_fig = go.Figure(
+                    data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))]
+                )
                 sf_fig.update_layout(
                     title="Répartition des SF par nœud",
                     xaxis_title="SF",
                     yaxis_title="Nombre de nœuds",
+                    yaxis_range=[0, sim.num_nodes],
                 )
                 sf_hist_pane.object = sf_fig
                 update_map()

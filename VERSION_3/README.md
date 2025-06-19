@@ -13,7 +13,7 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
    ```
 3. **Lancez le tableau de bord :**
    ```bash
-   panel serve dashboard.py --show
+   panel serve launcher/dashboard.py --show
    ```
 4. **Exécutez des simulations en ligne de commande :**
    ```bash

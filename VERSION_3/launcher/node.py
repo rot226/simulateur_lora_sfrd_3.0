@@ -116,6 +116,10 @@ class Node:
         self.downlink_pending: int = 0
         self.acks_received: int = 0
 
+        # ADR helper flags
+        self.last_adr_ack_req: bool = False
+        self._nb_trans_left: int = 0
+
         # Energy accounting state
         self.last_state_time = 0.0
         self.state = 'sleep'
@@ -264,12 +268,14 @@ class Node:
             fctrl |= 0x80
             if self.adr_ack_cnt >= self.adr_ack_limit:
                 fctrl |= 0x40
+        self.last_adr_ack_req = bool(fctrl & 0x40)
         frame = LoRaWANFrame(
             mhdr=mhdr, fctrl=fctrl, fcnt=self.fcnt_up, payload=payload, confirmed=confirmed
         )
         self.fcnt_up += 1
         if self.adr:
             self.adr_ack_cnt += 1
+            self._check_adr_ack_delay()
         if confirmed:
             self.awaiting_ack = True
         self.need_downlink_ack = False
@@ -326,6 +332,20 @@ class Node:
                 except Exception:
                     pass
 
+    def _check_adr_ack_delay(self) -> None:
+        """Reduce data rate when ADR_ACK_DELAY has elapsed with no downlink."""
+        from .lorawan import DBM_TO_TX_POWER_INDEX, TX_POWER_INDEX_TO_DBM
+
+        if self.adr_ack_cnt > self.adr_ack_limit + self.adr_ack_delay:
+            if self.sf < 12:
+                self.sf += 1
+            else:
+                idx = DBM_TO_TX_POWER_INDEX.get(int(self.tx_power), 0)
+                if idx > 0:
+                    idx -= 1
+                    self.tx_power = TX_POWER_INDEX_TO_DBM[idx]
+            self.adr_ack_cnt = 0
+            
     def schedule_receive_windows(self, end_time: float):
         """Return RX1 and RX2 times for the last uplink."""
         from .lorawan import compute_rx1, compute_rx2

@@ -85,6 +85,12 @@ class NetworkServer:
         self.packets_received += 1
         logger.debug(f"NetworkServer: packet event {event_id} from node {node_id} received via gateway {gateway_id}.")
 
+        node = next((n for n in self.nodes if n.id == node_id), None)
+        if node and node.last_adr_ack_req:
+            # Device requested an ADR acknowledgement
+            self.send_downlink(node)
+            node.last_adr_ack_req = False
+
         # Appliquer ADR complet au niveau serveur
         if self.adr_enabled and rssi is not None:
             from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, TX_POWER_INDEX_TO_DBM

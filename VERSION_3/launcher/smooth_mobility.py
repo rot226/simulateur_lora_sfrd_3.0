@@ -22,7 +22,7 @@ def bezier_point(p0, p1, p2, p3, t):
 class SmoothMobility:
     """Smooth node mobility based on cubic Bezier interpolation."""
 
-    def __init__(self, area_size: float, min_speed: float = 2.0, max_speed: float = 5.0, step: float = 1.0):
+    def __init__(self, area_size: float, min_speed: float = 2.0, max_speed: float = 10.0, step: float = 1.0):
         self.area_size = area_size
         self.min_speed = min_speed
         self.max_speed = max_speed

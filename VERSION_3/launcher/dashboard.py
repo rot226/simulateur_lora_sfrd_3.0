@@ -60,7 +60,7 @@ mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", 
 
 # Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
 mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1)
-mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=5.0, step=0.5, start=0.1)
+mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=10.0, step=0.5, start=0.1)
 
 # --- Boutons de contrôle ---
 start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")

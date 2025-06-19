@@ -62,6 +62,54 @@ class LinkADRAns:
         return bytes([0x03, self.status])
 
 
+@dataclass
+class LinkCheckReq:
+    """LinkCheckReq MAC command"""
+
+    def to_bytes(self) -> bytes:
+        return bytes([0x02])
+
+
+@dataclass
+class LinkCheckAns:
+    margin: int
+    gw_cnt: int
+
+    def to_bytes(self) -> bytes:
+        return bytes([0x02, self.margin & 0xFF, self.gw_cnt & 0xFF])
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "LinkCheckAns":
+        if len(data) < 3 or data[0] != 0x02:
+            raise ValueError("Invalid LinkCheckAns")
+        return LinkCheckAns(margin=data[1], gw_cnt=data[2])
+
+
+@dataclass
+class DeviceTimeReq:
+    """DeviceTimeReq MAC command"""
+
+    def to_bytes(self) -> bytes:
+        return bytes([0x0D])
+
+
+@dataclass
+class DeviceTimeAns:
+    seconds: int
+    fractional: int = 0
+
+    def to_bytes(self) -> bytes:
+        return bytes([0x0D]) + self.seconds.to_bytes(4, "little") + bytes([self.fractional & 0xFF])
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "DeviceTimeAns":
+        if len(data) < 6 or data[0] != 0x0D:
+            raise ValueError("Invalid DeviceTimeAns")
+        secs = int.from_bytes(data[1:5], "little")
+        frac = data[5]
+        return DeviceTimeAns(secs, frac)
+
+
 def compute_rx1(end_time: float) -> float:
     """Return the opening time of RX1 window after an uplink."""
     return end_time + 1.0

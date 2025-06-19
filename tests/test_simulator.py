@@ -13,7 +13,12 @@ from VERSION_3.launcher.simulator import Simulator
 from VERSION_3.launcher.node import Node
 from VERSION_3.launcher.gateway import Gateway
 from VERSION_3.launcher.server import NetworkServer
-from VERSION_3.launcher.lorawan import LinkADRAns
+from VERSION_3.launcher.lorawan import (
+    LinkADRAns,
+    LinkCheckReq,
+    LinkCheckAns,
+    DeviceTimeReq,
+)
 
 
 def test_channel_compute_rssi_and_airtime():
@@ -110,3 +115,29 @@ def test_lorawan_frame_handling():
     up2 = node.prepare_uplink(b"data")
     assert up2.payload.startswith(LinkADRAns().to_bytes())
     assert node.pending_mac_cmd is None
+
+
+def test_downlink_ack_bit_and_mac_commands():
+    node = Node(2, 0.0, 0.0, 7, 14.0, channel=Channel())
+    gw = Gateway(1, 0.0, 0.0)
+    server = NetworkServer()
+    server.gateways = [gw]
+    server.nodes = [node]
+
+    server.send_downlink(node, LinkCheckReq().to_bytes(), request_ack=True)
+    frame = gw.pop_downlink(node.id)
+    assert frame.fctrl & 0x20
+    node.handle_downlink(frame)
+    assert node.need_downlink_ack
+    assert node.pending_mac_cmd == LinkCheckAns(margin=255, gw_cnt=1).to_bytes()
+
+    up = node.prepare_uplink(b"hello")
+    assert up.fctrl & 0x20
+    assert up.payload.startswith(LinkCheckAns(margin=255, gw_cnt=1).to_bytes())
+    assert not node.need_downlink_ack
+
+    # DeviceTimeReq
+    server.send_downlink(node, DeviceTimeReq().to_bytes())
+    frame2 = gw.pop_downlink(node.id)
+    node.handle_downlink(frame2)
+    assert node.pending_mac_cmd is not None

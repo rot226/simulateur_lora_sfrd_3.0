@@ -28,6 +28,7 @@ class NetworkServer:
         payload: bytes = b"",
         confirmed: bool = False,
         adr_command: tuple[int, float] | None = None,
+        request_ack: bool = False,
     ):
         """Queue a downlink frame for a node via the first gateway."""
         from .lorawan import (
@@ -40,8 +41,9 @@ class NetworkServer:
         gw = self.gateways[0] if self.gateways else None
         if gw is None:
             return
+        fctrl = 0x20 if request_ack else 0
         frame = LoRaWANFrame(
-            mhdr=0x60, fctrl=0, fcnt=node.fcnt_down, payload=payload, confirmed=confirmed
+            mhdr=0x60, fctrl=fctrl, fcnt=node.fcnt_down, payload=payload, confirmed=confirmed
         )
         if adr_command:
             sf, power = adr_command

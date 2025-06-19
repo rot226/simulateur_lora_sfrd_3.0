@@ -15,6 +15,13 @@ def simulate(nodes, gateways, area, mode, interval, steps, channels=1):
     et sur les ``gateways`` disponibles et les collisions ne surviennent
     qu'entre nœuds partageant à la fois le même canal **et** la même passerelle.
     """
+    if nodes < 1:
+        raise ValueError("nodes must be >= 1")
+    if gateways < 1:
+        raise ValueError("gateways must be >= 1")
+    if channels < 1:
+        raise ValueError("channels must be >= 1")
+
     # Initialisation des compteurs
     total_transmissions = 0
     collisions = 0

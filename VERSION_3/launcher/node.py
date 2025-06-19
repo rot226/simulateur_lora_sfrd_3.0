@@ -100,6 +100,7 @@ class Node:
         # Additional state used by the simulator
         self.history: list[dict] = []
         self.rssi_history: list[float] = []
+        self.snr_history: list[float] = []
         self.in_transmission: bool = False
         self.current_end_time: float | None = None
         self.last_rssi: float | None = None

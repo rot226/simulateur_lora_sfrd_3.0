@@ -6,8 +6,13 @@ import logging
 # Configuration du logger pour afficher les informations
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-def simulate(nodes, gateways, area, mode, interval, steps):
-    """Exécute une simulation LoRa simplifiée et retourne les métriques."""
+def simulate(nodes, gateways, area, mode, interval, steps, channels=1):
+    """Exécute une simulation LoRa simplifiée et retourne les métriques.
+
+    Les transmissions peuvent se faire sur plusieurs canaux. Les nœuds sont
+    répartis de façon uniforme sur les ``channels`` disponibles et les
+    collisions ne surviennent qu'entre nœuds partageant le même canal.
+    """
     # Initialisation des compteurs
     total_transmissions = 0
     collisions = 0
@@ -15,8 +20,9 @@ def simulate(nodes, gateways, area, mode, interval, steps):
     energy_consumed = 0.0
     delays = []  # stockera le délai de chaque paquet livré
 
-    # Génération des instants d'émission pour chaque nœud
+    # Génération des instants d'émission pour chaque nœud et attribution d'un canal
     send_times = {node: [] for node in range(nodes)}
+    node_channels = {node: node % channels for node in range(nodes)}
     for node in range(nodes):
         if mode.lower() == "periodic":
             t = 0
@@ -32,18 +38,19 @@ def simulate(nodes, gateways, area, mode, interval, steps):
     # Simulation pas à pas
     for t in range(steps):
         transmitting_nodes = [node for node, times in send_times.items() if t in times]
-        nb_tx = len(transmitting_nodes)
-        if nb_tx > 0:
-            total_transmissions += nb_tx
-            if nb_tx == 1:
-                # Un seul nœud émet à ce pas -> succès
-                delivered += 1
-                energy_consumed += 1.0  # consommation d'énergie d'une transmission
-                delays.append(0)  # délai nul (livraison immédiate)
-            else:
-                # Plusieurs émettent -> collision pour tous ces paquets
-                collisions += nb_tx  # on compte chaque paquet perdu comme collision
-                energy_consumed += nb_tx * 1.0  # chaque nœud a tout de même dépensé de l'énergie
+        # Gérer les transmissions canal par canal
+        for ch in range(channels):
+            nodes_on_ch = [n for n in transmitting_nodes if node_channels[n] == ch]
+            nb_tx = len(nodes_on_ch)
+            if nb_tx > 0:
+                total_transmissions += nb_tx
+                if nb_tx == 1:
+                    delivered += 1
+                    energy_consumed += 1.0
+                    delays.append(0)
+                else:
+                    collisions += nb_tx
+                    energy_consumed += nb_tx * 1.0
 
     # Calcul des métriques finales
     pdr = (delivered / total_transmissions) * 100 if total_transmissions > 0 else 0
@@ -56,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--nodes", type=int, default=10, help="Nombre de nœuds")
     parser.add_argument("--gateways", type=int, default=1, help="Nombre de gateways")
     parser.add_argument("--area", type=int, default=1000, help="Taille de l'aire de simulation (côté du carré)")
+    parser.add_argument("--channels", type=int, default=1, help="Nombre de canaux radio")
     parser.add_argument("--mode", choices=["Random", "Periodic"], default="Random", help="Mode de transmission")
     parser.add_argument("--interval", type=int, default=10, help="Intervalle moyen ou fixe entre transmissions")
     parser.add_argument("--steps", type=int, default=100, help="Nombre de pas de temps de la simulation")
@@ -63,8 +71,11 @@ if __name__ == "__main__":
     parser.add_argument("--lorawan-demo", action="store_true", help="Exécute un exemple LoRaWAN")
     args = parser.parse_args()
 
-    logging.info(f"Simulation d'un réseau LoRa : {args.nodes} nœuds, {args.gateways} gateways, "
-                 f"aire={args.area}m, mode={args.mode}, intervalle={args.interval}, steps={args.steps}")
+    logging.info(
+        f"Simulation d'un réseau LoRa : {args.nodes} nœuds, {args.gateways} gateways, "
+        f"aire={args.area}m, {args.channels} canaux, mode={args.mode}, "
+        f"intervalle={args.interval}, steps={args.steps}"
+    )
     if args.lorawan_demo:
         from launcher.node import Node
         from launcher.gateway import Gateway
@@ -82,7 +93,13 @@ if __name__ == "__main__":
         exit()
 
     delivered, collisions, pdr, energy, avg_delay = simulate(
-        args.nodes, args.gateways, args.area, args.mode, args.interval, args.steps
+        args.nodes,
+        args.gateways,
+        args.area,
+        args.mode,
+        args.interval,
+        args.steps,
+        args.channels,
     )
     logging.info(f"Résultats : PDR={pdr:.2f}% , Paquets livrés={delivered}, Collisions={collisions}, "
                  f"Énergie consommée={energy:.1f} unités, Délai moyen={avg_delay:.2f} unités de temps")
@@ -92,9 +109,33 @@ if __name__ == "__main__":
         with open(args.output, mode='w', newline='') as f:
             writer = csv.writer(f)
             # En-tête
-            writer.writerow(["nodes", "gateways", "area", "mode", "interval", "steps",
-                             "delivered", "collisions", "PDR(%)", "energy", "avg_delay"])
+            writer.writerow([
+                "nodes",
+                "gateways",
+                "area",
+                "channels",
+                "mode",
+                "interval",
+                "steps",
+                "delivered",
+                "collisions",
+                "PDR(%)",
+                "energy",
+                "avg_delay",
+            ])
             # Données
-            writer.writerow([args.nodes, args.gateways, args.area, args.mode, args.interval, args.steps,
-                             delivered, collisions, f"{pdr:.2f}", f"{energy:.1f}", f"{avg_delay:.2f}"])
+            writer.writerow([
+                args.nodes,
+                args.gateways,
+                args.area,
+                args.channels,
+                args.mode,
+                args.interval,
+                args.steps,
+                delivered,
+                collisions,
+                f"{pdr:.2f}",
+                f"{energy:.1f}",
+                f"{avg_delay:.2f}",
+            ])
         logging.info(f"Résultats enregistrés dans {args.output}")

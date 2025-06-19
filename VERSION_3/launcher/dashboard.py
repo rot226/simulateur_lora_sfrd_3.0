@@ -321,9 +321,24 @@ export_button.on_click(exporter_csv)
 
 # --- Bouton d'accélération ---
 def fast_forward(event=None):
-    global sim
+    global sim, sim_callback, chrono_callback, start_time, max_real_time
     if sim and sim.running:
+        # Stop periodic callbacks to avoid concurrent updates
+        if sim_callback:
+            sim_callback.stop()
+            sim_callback = None
+        if chrono_callback:
+            chrono_callback.stop()
+            chrono_callback = None
+
+        # Pause chrono so time does not keep increasing during fast forward
+        start_time = None
+        max_real_time = None
+
+        # Run the full simulation
         sim.run()
+
+        # Update final metrics and plots
         metrics = sim.get_metrics()
         pdr_indicator.value = metrics["PDR"]
         collisions_indicator.value = metrics["collisions"]
@@ -334,6 +349,8 @@ def fast_forward(event=None):
         sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
         sf_hist_pane.object = sf_fig
         update_map()
+
+        # Re-enable buttons and export
         on_stop(None)
 
 

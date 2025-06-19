@@ -69,6 +69,13 @@ class Node:
         self.awaiting_ack = False
         self.pending_mac_cmd = None
 
+        # Additional state used by the simulator
+        self.history: list[dict] = []
+        self.in_transmission: bool = False
+        self.current_end_time: float | None = None
+        self.last_rssi: float | None = None
+        self.last_snr: float | None = None
+
     def distance_to(self, other) -> float:
         """
         Calcule la distance euclidienne (mètres) entre ce nœud et un autre objet possédant 

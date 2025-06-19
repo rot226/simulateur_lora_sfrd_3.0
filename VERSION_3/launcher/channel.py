@@ -14,6 +14,12 @@ class Channel:
         receiver_noise_floor_dBm: float = -174.0,
         noise_figure_dB: float = 6.0,
         noise_floor_std: float = 0.0,
+        *,
+        bandwidth: float = 125e3,
+        coding_rate: int = 1,
+        capture_threshold_dB: float = 6.0,
+        tx_power_std: float = 0.0,
+        interference_dB: float = 0.0,
     ):
         """
         Initialise le canal radio avec paramètres de propagation.
@@ -27,6 +33,11 @@ class Channel:
         :param noise_figure_dB: Facteur de bruit ajouté par le récepteur (dB).
         :param noise_floor_std: Écart-type de la variation aléatoire du bruit
             (dB). Utile pour modéliser un canal plus dynamique.
+        :param bandwidth: Largeur de bande LoRa (Hz).
+        :param coding_rate: Index de code (0=4/5 … 4=4/8).
+        :param capture_threshold_dB: Seuil de capture pour le décodage simultané.
+        :param tx_power_std: Écart-type de la variation aléatoire de puissance TX.
+        :param interference_dB: Bruit supplémentaire moyen dû aux interférences.
         """
 
         self.frequency_hz = frequency_hz
@@ -37,10 +48,12 @@ class Channel:
         self.receiver_noise_floor_dBm = receiver_noise_floor_dBm
         self.noise_figure_dB = noise_figure_dB
         self.noise_floor_std = noise_floor_std
+        self.tx_power_std = tx_power_std
+        self.interference_dB = interference_dB
 
         # Paramètres LoRa (BW 125 kHz, CR 4/5, préambule 8, CRC activé)
-        self.bandwidth = 125e3  # 125 kHz
-        self.coding_rate = 1    # CR=1 correspond à 4/5 (dans les formules, CR+4 = 5)
+        self.bandwidth = bandwidth
+        self.coding_rate = coding_rate
         self.preamble_symbols = 8
         self.low_data_rate_threshold = 11  # SF >= 11 -> Low Data Rate Optimization activé
 
@@ -54,7 +67,7 @@ class Channel:
             12: -137
         }
         # Seuil de capture (différence de RSSI en dB pour qu'un signal plus fort capture la réception)
-        self.capture_threshold_dB = 6.0
+        self.capture_threshold_dB = capture_threshold_dB
 
     def noise_floor_dBm(self) -> float:
         """Retourne le niveau de bruit (dBm) pour la bande passante configurée.
@@ -63,7 +76,7 @@ class Channel:
         plus réaliste.
         """
         thermal = self.receiver_noise_floor_dBm + 10 * math.log10(self.bandwidth)
-        noise = thermal + self.noise_figure_dB
+        noise = thermal + self.noise_figure_dB + self.interference_dB
         if self.noise_floor_std > 0:
             noise += random.gauss(0, self.noise_floor_std)
         return noise
@@ -89,6 +102,8 @@ class Channel:
             loss += random.gauss(0, self.shadowing_std)
         # RSSI = P_tx - pertes - pertes câble
         rssi = tx_power_dBm - loss - self.cable_loss_dB
+        if self.tx_power_std > 0:
+            rssi += random.gauss(0, self.tx_power_std)
         if self.fast_fading_std > 0:
             rssi += random.gauss(0, self.fast_fading_std)
         snr = rssi - self.noise_floor_dBm()

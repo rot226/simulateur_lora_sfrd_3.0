@@ -86,6 +86,11 @@ réception :
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 `Channel.compute_rssi`.
 
+Depuis cette mise à jour, la largeur de bande (`bandwidth`) et le codage
+(`coding_rate`) sont également configurables lors de la création d'un
+`Channel`. On peut modéliser des interférences externes via `interference_dB`
+et introduire des variations aléatoires de puissance avec `tx_power_std`.
+
 ## SF et puissance initiaux
 
 Deux nouvelles cases à cocher du tableau de bord permettent de fixer le

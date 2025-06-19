@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """Analyse simple des fichiers CSV générés par le simulateur."""
 import sys
-import pandas as pd
-import matplotlib.pyplot as plt
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+except ImportError as exc:  # pragma: no cover - optional dependencies
+    missing = "pandas" if "pandas" in str(exc) else "matplotlib"
+    print(
+        f"Le module '{missing}' est requis pour exécuter ce script. "
+        "Installez les dépendances via 'pip install -r VERSION_3/requirements.txt'."
+    )
+    raise SystemExit(1)
 
 if len(sys.argv) < 2:
     print("Usage: python analyse_resultats.py fichier1.csv [fichier2.csv ...]")

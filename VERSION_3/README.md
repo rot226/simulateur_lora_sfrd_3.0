@@ -29,7 +29,7 @@ Quelques commandes pour tester des scénarios plus complexes :
 ```bash
 # Simulation multi-canaux avec mobilité
 python run.py --nodes 50 --gateways 2 --area 2000 --channels 3 \
-  --mobility --steps 500 --output avances.csv
+  --mobility --steps 500 --output advanced.csv
 
 # Démonstration LoRaWAN avec downlinks
 python run.py --lorawan-demo --steps 100 --output lorawan.csv

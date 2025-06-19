@@ -2,6 +2,7 @@ import math
 import heapq
 import logging
 import random
+from dataclasses import dataclass
 
 try:
     import pandas as pd
@@ -16,6 +17,16 @@ from .server import NetworkServer
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
+
+
+@dataclass(order=True, slots=True)
+class Event:
+    """Represent a scheduled event."""
+
+    time: float
+    priority: int
+    id: int
+    node: Node
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +147,7 @@ class Simulator:
         self.network_server.channel = self.channel
         
         # File d'événements (min-heap)
-        self.event_queue: list[tuple[float, int, int, Node]] = []
+        self.event_queue: list[Event] = []
         self.current_time = 0.0
         self.event_id_counter = 0
         
@@ -164,9 +175,10 @@ class Simulator:
             # Planifier le premier changement de position si la mobilité est activée
             if self.mobility_enabled:
                 self.schedule_mobility(node, self.mobility_model.step)
-            if node.class_type.upper() in ('B', 'C'):
-                eid = self.event_id_counter; self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (0.0, 3, eid, node))
+            if node.class_type.upper() in ("B", "C"):
+                eid = self.event_id_counter
+                self.event_id_counter += 1
+                heapq.heappush(self.event_queue, Event(0.0, 3, eid, node))
         
         # Indicateur d'exécution de la simulation
         self.running = True
@@ -177,22 +189,30 @@ class Simulator:
         self.event_id_counter += 1
         if self.duty_cycle_manager:
             time = self.duty_cycle_manager.enforce(node.id, time)
-        heapq.heappush(self.event_queue, (time, 1, event_id, node))
-        logger.debug(f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s")
+        heapq.heappush(self.event_queue, Event(time, 1, event_id, node))
+        logger.debug(
+            f"Scheduled transmission {event_id} for node {node.id} at t={time:.2f}s"
+        )
     
     def schedule_mobility(self, node: Node, time: float):
         """Planifie un événement de mobilité (déplacement aléatoire) pour un nœud à l'instant donné."""
         event_id = self.event_id_counter
         self.event_id_counter += 1
-        heapq.heappush(self.event_queue, (time, 2, event_id, node))
-        logger.debug(f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s")
+        heapq.heappush(self.event_queue, Event(time, 2, event_id, node))
+        logger.debug(
+            f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s"
+        )
     
     def step(self) -> bool:
         """Exécute le prochain événement planifié. Retourne False si plus d'événement à traiter."""
         if not self.running or not self.event_queue:
             return False
         # Extraire le prochain événement (le plus tôt dans le temps)
-        time, priority, event_id, node = heapq.heappop(self.event_queue)
+        event = heapq.heappop(self.event_queue)
+        time = event.time
+        priority = event.priority
+        event_id = event.id
+        node = event.node
         # Avancer le temps de simulation
         self.current_time = time
         
@@ -252,13 +272,15 @@ class Simulator:
             node.last_rssi = best_rssi if heard_by_any else None
             node.last_snr = best_snr if heard_by_any else None
             # Planifier l'événement de fin de transmission correspondant
-            heapq.heappush(self.event_queue, (end_time, 0, event_id, node))
+            heapq.heappush(self.event_queue, Event(end_time, 0, event_id, node))
             # Planifier les fenêtres de réception LoRaWAN
             rx1, rx2 = node.schedule_receive_windows(end_time)
-            ev1 = self.event_id_counter; self.event_id_counter += 1
-            heapq.heappush(self.event_queue, (rx1, 3, ev1, node))
-            ev2 = self.event_id_counter; self.event_id_counter += 1
-            heapq.heappush(self.event_queue, (rx2, 3, ev2, node))
+            ev1 = self.event_id_counter
+            self.event_id_counter += 1
+            heapq.heappush(self.event_queue, Event(rx1, 3, ev1, node))
+            ev2 = self.event_id_counter
+            self.event_id_counter += 1
+            heapq.heappush(self.event_queue, Event(rx2, 3, ev2, node))
             # Planifier la prochaine transmission de ce nœud (selon le mode), sauf si limite atteinte
             if self.packets_to_send == 0 or self.packets_sent < self.packets_to_send:
                 if self.transmission_mode.lower() == 'random':
@@ -269,10 +291,10 @@ class Simulator:
                 self.schedule_event(node, next_time)
             else:
                 # Limite de paquets atteinte: ne plus planifier de nouvelles transmissions
-                new_queue = []
+                new_queue: list[Event] = []
                 for evt in self.event_queue:
                     # Conserver uniquement les fins de transmissions en cours (priority 0)
-                    if evt[1] == 0:
+                    if evt.priority == 0:
                         new_queue.append(evt)
                 heapq.heapify(new_queue)
                 self.event_queue = new_queue
@@ -401,14 +423,20 @@ class Simulator:
                 selected_gw = gw
                 break
             # Replanifier selon la classe du nœud
-            if node.class_type.upper() == 'B':
+            if node.class_type.upper() == "B":
                 nxt = time + 30.0
-                eid = self.event_id_counter; self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (nxt, 3, eid, node))
-            elif node.class_type.upper() == 'C' and selected_gw and selected_gw.downlink_buffer.get(node.id):
+                eid = self.event_id_counter
+                self.event_id_counter += 1
+                heapq.heappush(self.event_queue, Event(nxt, 3, eid, node))
+            elif (
+                node.class_type.upper() == "C"
+                and selected_gw
+                and selected_gw.downlink_buffer.get(node.id)
+            ):
                 nxt = time + 1.0
-                eid = self.event_id_counter; self.event_id_counter += 1
-                heapq.heappush(self.event_queue, (nxt, 3, eid, node))
+                eid = self.event_id_counter
+                self.event_id_counter += 1
+                heapq.heappush(self.event_queue, Event(nxt, 3, eid, node))
             return True
 
         elif priority == 2:

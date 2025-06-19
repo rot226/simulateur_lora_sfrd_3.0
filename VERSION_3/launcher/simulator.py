@@ -33,7 +33,8 @@ class Simulator:
                  channels=None, channel_distribution: str = "round-robin",
                  mobility_speed: tuple[float, float] = (2.0, 10.0),
                  fixed_sf: int | None = None,
-                 fixed_tx_power: float | None = None):
+                 fixed_tx_power: float | None = None,
+                 battery_capacity: float = 1000.0):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -68,6 +69,7 @@ class Simulator:
         self.adr_server = adr_server
         self.fixed_sf = fixed_sf
         self.fixed_tx_power = fixed_tx_power
+        self.battery_capacity = battery_capacity
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         self.mobility_model = SmoothMobility(area_size, mobility_speed[0], mobility_speed[1])
@@ -113,7 +115,15 @@ class Simulator:
             sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)
             tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
             channel = self.multichannel.select()
-            node = Node(node_id, x, y, sf, tx_power, channel=channel)
+            node = Node(
+                node_id,
+                x,
+                y,
+                sf,
+                tx_power,
+                channel=channel,
+                battery_capacity=battery_capacity,
+            )
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
             node.initial_x = x
             node.initial_y = y
@@ -491,6 +501,8 @@ class Simulator:
         df['final_sf'] = df['node_id'].apply(lambda nid: node_dict[nid].sf)
         df['initial_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].initial_tx_power)
         df['final_tx_power'] = df['node_id'].apply(lambda nid: node_dict[nid].tx_power)
+        df['battery_capacity_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_capacity)
+        df['battery_remaining_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_remaining)
         df['packets_sent'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_sent)
         df['packets_success'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_success)
         df['packets_collision'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_collision)
@@ -501,6 +513,7 @@ class Simulator:
         columns_order = [
             'event_id', 'node_id', 'initial_x', 'initial_y', 'final_x', 'final_y',
             'initial_sf', 'final_sf', 'initial_tx_power', 'final_tx_power',
+            'battery_capacity_J', 'battery_remaining_J',
             'packets_sent', 'packets_success', 'packets_collision',
             'energy_consumed_J_node', 'downlink_pending', 'acks_received',
             'start_time', 'end_time', 'energy_J', 'rssi_dBm', 'snr_dB',

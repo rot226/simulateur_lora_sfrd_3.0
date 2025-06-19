@@ -75,6 +75,13 @@ lancement de la simulation. Une fois la case cochée, sélectionnez la valeur
 souhaitée via le curseur associé (SF 7‑12 et puissance 2‑20 dBm). Si la case est
 décochée, chaque nœud conserve des valeurs aléatoires par défaut.
 
+## Batterie
+
+Chaque nœud possède désormais une capacité énergétique configurable via le
+paramètre `battery_capacity` (en joules). Lors de chaque transmission,
+la quantité d'énergie correspondante est soustraite afin de suivre
+l'autonomie restante (`Node.battery_remaining`).
+
 ## Fonctionnalités LoRaWAN
 
 Une couche LoRaWAN simplifiée est maintenant disponible. Le module

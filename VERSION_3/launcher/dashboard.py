@@ -323,6 +323,12 @@ export_button.on_click(exporter_csv)
 def fast_forward(event=None):
     global sim, sim_callback, chrono_callback, start_time, max_real_time
     if sim and sim.running:
+        if sim.packets_to_send == 0:
+            export_message.object = (
+                "⚠️ Défini un nombre de paquets supérieur à 0 "
+                "pour utiliser l'accélération."
+            )
+            return
         # Stop periodic callbacks to avoid concurrent updates
         if sim_callback:
             sim_callback.stop()

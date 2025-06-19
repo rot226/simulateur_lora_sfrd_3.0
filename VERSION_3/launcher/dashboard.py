@@ -79,6 +79,7 @@ pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
 collisions_indicator = pn.indicators.Number(name="Collisions", value=0, format="{value:d}")
 energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
 delay_indicator = pn.indicators.Number(name="Délai moyen (s)", value=0.0, format="{value:.3f}")
+throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
 
 # --- Chronomètre ---
 chrono_indicator = pn.indicators.Number(name="Durée simulation (s)", value=0, format="{value:.1f}")
@@ -168,6 +169,7 @@ def step_simulation():
     collisions_indicator.value = metrics["collisions"]
     energy_indicator.value = metrics["energy_J"]
     delay_indicator.value = metrics["avg_delay_s"]
+    throughput_indicator.value = metrics["throughput_bps"]
     sf_dist = metrics["sf_distribution"]
     sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
     sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
@@ -356,6 +358,7 @@ def fast_forward(event=None):
                 collisions_indicator.value = metrics["collisions"]
                 energy_indicator.value = metrics["energy_J"]
                 delay_indicator.value = metrics["avg_delay_s"]
+                throughput_indicator.value = metrics["throughput_bps"]
                 sf_dist = metrics["sf_distribution"]
                 sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
                 sf_fig.update_layout(
@@ -438,6 +441,7 @@ metrics_col = pn.Column(
     collisions_indicator,
     energy_indicator,
     delay_indicator,
+    throughput_indicator,
 )
 metrics_col.width = 220
 

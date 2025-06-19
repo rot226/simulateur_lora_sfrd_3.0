@@ -156,6 +156,13 @@ def test_sim_run_and_step_equivalence():
         pass
     metrics_step = sim_step.get_metrics()
 
-    keys = ["PDR", "collisions", "energy_J", "avg_delay_s", "retransmissions"]
+    keys = [
+        "PDR",
+        "collisions",
+        "energy_J",
+        "avg_delay_s",
+        "retransmissions",
+        "throughput_bps",
+    ]
     for key in keys:
         assert metrics_run[key] == pytest.approx(metrics_step[key])

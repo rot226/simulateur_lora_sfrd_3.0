@@ -68,6 +68,7 @@ class Node:
         self.class_type = class_type
         self.awaiting_ack = False
         self.pending_mac_cmd = None
+        self.need_downlink_ack = False
 
         # Additional state used by the simulator
         self.history: list[dict] = []
@@ -153,21 +154,36 @@ class Node:
             self.pending_mac_cmd = None
 
         mhdr = 0x40 if not confirmed else 0x80
-        frame = LoRaWANFrame(mhdr=mhdr, fctrl=0, fcnt=self.fcnt_up,
-                             payload=payload, confirmed=confirmed)
+        fctrl = 0x20 if self.need_downlink_ack else 0
+        frame = LoRaWANFrame(
+            mhdr=mhdr, fctrl=fctrl, fcnt=self.fcnt_up, payload=payload, confirmed=confirmed
+        )
         self.fcnt_up += 1
         if confirmed:
             self.awaiting_ack = True
+        self.need_downlink_ack = False
         return frame
 
     def handle_downlink(self, frame):
         """Process a received downlink frame."""
-        from .lorawan import LinkADRReq, LinkADRAns, DR_TO_SF, TX_POWER_INDEX_TO_DBM
+        from .lorawan import (
+            LinkADRReq,
+            LinkADRAns,
+            LinkCheckReq,
+            LinkCheckAns,
+            DeviceTimeReq,
+            DeviceTimeAns,
+            DR_TO_SF,
+            TX_POWER_INDEX_TO_DBM,
+        )
 
         self.fcnt_down = frame.fcnt + 1
         if frame.confirmed:
             self.awaiting_ack = False
             self.acks_received += 1
+
+        if frame.fctrl & 0x20:
+            self.need_downlink_ack = True
 
         self.downlink_pending = max(0, self.downlink_pending - 1)
 
@@ -180,6 +196,10 @@ class Node:
                     self.pending_mac_cmd = LinkADRAns().to_bytes()
                 except Exception:
                     pass
+            elif frame.payload == LinkCheckReq().to_bytes():
+                self.pending_mac_cmd = LinkCheckAns(margin=255, gw_cnt=1).to_bytes()
+            elif frame.payload == DeviceTimeReq().to_bytes():
+                self.pending_mac_cmd = DeviceTimeAns(int(self.fcnt_up)).to_bytes()
             elif frame.payload.startswith(b"ADR:"):
                 try:
                     _, sf_str, pwr_str = frame.payload.decode().split(":")

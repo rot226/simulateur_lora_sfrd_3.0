@@ -4,6 +4,7 @@ import sys
 import panel as pn
 import plotly.graph_objects as go
 import time
+import threading
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
@@ -329,6 +330,11 @@ def fast_forward(event=None):
                 "pour utiliser l'accélération."
             )
             return
+
+        # Disable buttons during fast forward
+        fast_forward_button.disabled = True
+        stop_button.disabled = True
+
         # Stop periodic callbacks to avoid concurrent updates
         if sim_callback:
             sim_callback.stop()
@@ -341,23 +347,29 @@ def fast_forward(event=None):
         start_time = None
         max_real_time = None
 
-        # Run the full simulation
-        sim.run()
+        def run_and_update():
+            sim.run()
 
-        # Update final metrics and plots
-        metrics = sim.get_metrics()
-        pdr_indicator.value = metrics["PDR"]
-        collisions_indicator.value = metrics["collisions"]
-        energy_indicator.value = metrics["energy_J"]
-        delay_indicator.value = metrics["avg_delay_s"]
-        sf_dist = metrics["sf_distribution"]
-        sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
-        sf_fig.update_layout(title="Répartition des SF par nœud", xaxis_title="SF", yaxis_title="Nombre de nœuds")
-        sf_hist_pane.object = sf_fig
-        update_map()
+            def update_ui():
+                metrics = sim.get_metrics()
+                pdr_indicator.value = metrics["PDR"]
+                collisions_indicator.value = metrics["collisions"]
+                energy_indicator.value = metrics["energy_J"]
+                delay_indicator.value = metrics["avg_delay_s"]
+                sf_dist = metrics["sf_distribution"]
+                sf_fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
+                sf_fig.update_layout(
+                    title="Répartition des SF par nœud",
+                    xaxis_title="SF",
+                    yaxis_title="Nombre de nœuds",
+                )
+                sf_hist_pane.object = sf_fig
+                update_map()
+                on_stop(None)
 
-        # Re-enable buttons and export
-        on_stop(None)
+            pn.state.curdoc.add_next_tick_callback(update_ui)
+
+        threading.Thread(target=run_and_update, daemon=True).start()
 
 
 fast_forward_button.on_click(fast_forward)

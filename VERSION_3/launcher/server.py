@@ -2,6 +2,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Paramètres ADR (valeurs issues de la spécification LoRaWAN)
+REQUIRED_SNR = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+MARGIN_DB = 10.0
+
 class NetworkServer:
     """Représente le serveur de réseau LoRa (collecte des paquets reçus)."""
     def __init__(self):
@@ -76,21 +80,44 @@ class NetworkServer:
         self.packets_received += 1
         logger.debug(f"NetworkServer: packet event {event_id} from node {node_id} received via gateway {gateway_id}.")
 
-        # Appliquer ADR au niveau serveur si activé
+        # Appliquer ADR complet au niveau serveur
         if self.adr_enabled and rssi is not None:
-            from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, LinkADRReq
+            from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, LinkADRReq, TX_POWER_INDEX_TO_DBM
 
             node = next((n for n in self.nodes if n.id == node_id), None)
             if node:
-                node.rssi_history.append(rssi)
-                if len(node.rssi_history) > 20:
-                    node.rssi_history.pop(0)
-                if len(node.rssi_history) >= 20:
-                    avg_rssi = sum(node.rssi_history) / len(node.rssi_history)
-                    if avg_rssi > -120 and node.sf > 7:
-                        new_sf = node.sf - 1
-                        dr = SF_TO_DR.get(new_sf, SF_TO_DR.get(node.sf, 5))
-                        p_idx = DBM_TO_TX_POWER_INDEX.get(int(node.tx_power), 0)
-                        down = LinkADRReq(dr, p_idx).to_bytes()
-                        self.send_downlink(node, down)
-                        node.rssi_history.clear()
+                snr = rssi - self.channel.noise_floor_dBm()
+                node.snr_history.append(snr)
+                if len(node.snr_history) > 20:
+                    node.snr_history.pop(0)
+                if len(node.snr_history) >= 20:
+                    max_snr = max(node.snr_history)
+                    required = REQUIRED_SNR.get(node.sf, -20.0)
+                    margin = max_snr - required - MARGIN_DB
+                    nstep = int(round(margin / 3.0))
+
+                    sf = node.sf
+                    power = node.tx_power
+                    p_idx = DBM_TO_TX_POWER_INDEX.get(int(power), 0)
+
+                    while nstep > 0:
+                        if sf > 7:
+                            sf -= 1
+                        elif p_idx < max(TX_POWER_INDEX_TO_DBM.keys()):
+                            p_idx += 1
+                            power = TX_POWER_INDEX_TO_DBM[p_idx]
+                        nstep -= 1
+
+                    while nstep < 0:
+                        if p_idx > 0:
+                            p_idx -= 1
+                            power = TX_POWER_INDEX_TO_DBM[p_idx]
+                        elif sf < 12:
+                            sf += 1
+                        nstep += 1
+
+                    if sf != node.sf or power != node.tx_power:
+                        dr = SF_TO_DR.get(sf, SF_TO_DR.get(node.sf, 5))
+                        cmd = LinkADRReq(dr, p_idx).to_bytes()
+                        self.send_downlink(node, cmd)
+                        node.snr_history.clear()

@@ -134,6 +134,24 @@ class Node:
         """Incrémente le compteur de paquets perdus en collision."""
         self.packets_collision += 1
 
+    # ------------------------------------------------------------------
+    # PDR utilities
+    # ------------------------------------------------------------------
+
+    @property
+    def pdr(self) -> float:
+        """Retourne le PDR global de ce nœud."""
+        return self.packets_success / self.packets_sent if self.packets_sent > 0 else 0.0
+
+    @property
+    def recent_pdr(self) -> float:
+        """PDR calculé sur l'historique glissant."""
+        total = len(self.history)
+        if total == 0:
+            return 0.0
+        success = sum(1 for e in self.history if e.get('delivered'))
+        return success / total
+
     def add_energy(self, energy_joules: float):
         """
         Ajoute de l'énergie consommée en transmission.

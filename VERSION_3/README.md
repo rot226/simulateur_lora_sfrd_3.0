@@ -134,4 +134,13 @@ Le script affiche le PDR moyen puis sauvegarde un graphique dans
 `pdr_par_nodes.png`.
 
 Ce projet est distribué sous licence [MIT](../LICENSE).
+
+## Améliorations possibles
+
+Pour aller plus loin, on pourrait :
+
+- **Calculer des PDR par nœud ou par type de trafic.** Chaque nœud dispose déjà d'un historique de ses transmissions. On peut ainsi déterminer un taux de livraison individuel ou différencié suivant la classe ou le mode d'envoi.
+- **Conserver un historique glissant pour afficher un PDR moyen sur les dernières transmissions.** Le simulateur stocke désormais les vingt derniers événements de chaque nœud et calcule un PDR « récent ».
+- **Ajouter des indicateurs supplémentaires :** PDR par SF, par passerelle et par nœud sont exposés via la méthode `get_metrics()`.
+- **Intégrer des métriques de QoS :** délai moyen et nombre de retransmissions sont suivis pour affiner la vision du réseau.
  

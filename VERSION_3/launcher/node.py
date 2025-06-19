@@ -21,8 +21,18 @@ class Node:
         last_move_time (float) : Dernier instant (s) où la position a été mise à jour (mobilité).
     """
 
-    def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float,
-                 channel=None, devaddr: int | None = None, class_type: str = 'A'):
+    def __init__(
+        self,
+        node_id: int,
+        x: float,
+        y: float,
+        sf: int,
+        tx_power: float,
+        channel=None,
+        battery_capacity: float = 1000.0,
+        devaddr: int | None = None,
+        class_type: str = 'A',
+    ):
         """
         Initialise le nœud avec ses paramètres de départ.
         
@@ -47,6 +57,8 @@ class Node:
         
         # Énergie et compteurs de paquets
         self.energy_consumed = 0.0
+        self.battery_capacity = battery_capacity
+        self.battery_remaining = battery_capacity
         self.packets_sent = 0
         self.packets_success = 0
         self.packets_collision = 0
@@ -94,8 +106,11 @@ class Node:
         """
         Représentation en chaîne pour débogage, affichant l'ID, la position et le SF actuel.
         """
-        return (f"Node(id={self.id}, pos=({self.x:.1f},{self.y:.1f}), "
-                f"SF={self.sf}, TxPower={self.tx_power:.1f} dBm)")
+        return (
+            f"Node(id={self.id}, pos=({self.x:.1f},{self.y:.1f}), "
+            f"SF={self.sf}, TxPower={self.tx_power:.1f} dBm, "
+            f"Battery={self.battery_remaining:.1f}J)"
+        )
 
     def to_dict(self) -> dict:
         """
@@ -113,6 +128,8 @@ class Node:
             'final_sf': self.sf,
             'initial_tx_power': self.initial_tx_power,
             'final_tx_power': self.tx_power,
+            'battery_capacity_J': self.battery_capacity,
+            'battery_remaining_J': self.battery_remaining,
             'energy_consumed_J': self.energy_consumed,
             'packets_sent': self.packets_sent,
             'packets_success': self.packets_success,
@@ -140,6 +157,7 @@ class Node:
         :param energy_joules: Énergie (J) dépensée lors de l'envoi d'un paquet.
         """
         self.energy_consumed += energy_joules
+        self.battery_remaining = max(0.0, self.battery_remaining - energy_joules)
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods
@@ -193,3 +211,9 @@ class Node:
         from .lorawan import compute_rx1, compute_rx2
 
         return compute_rx1(end_time), compute_rx2(end_time)
+
+    def battery_level(self) -> float:
+        """Return remaining battery level as a fraction between 0 and 1."""
+        if self.battery_capacity <= 0:
+            return 0.0
+        return self.battery_remaining / self.battery_capacity

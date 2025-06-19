@@ -93,5 +93,39 @@ Lancer l'exemple minimal :
 python run.py --lorawan-demo
 ```
 
+## Format du fichier CSV
+
+L'option `--output` de `run.py` permet d'enregistrer les métriques de la
+simulation dans un fichier CSV. Ce dernier contient l'en‑tête suivant :
+
+```
+nodes,gateways,area,mode,interval,steps,delivered,collisions,PDR(%),energy,avg_delay
+```
+
+* **nodes** : nombre de nœuds simulés.
+* **gateways** : nombre de passerelles.
+* **area** : côté du carré de simulation en mètres.
+* **mode** : `Random` ou `Periodic`.
+* **interval** : intervalle moyen/fixe entre deux transmissions.
+* **steps** : nombre de pas de temps simulés.
+* **delivered** : paquets reçus par au moins une passerelle.
+* **collisions** : paquets perdus par collision.
+* **PDR(%)** : taux de livraison en pourcentage.
+* **energy** : énergie totale consommée (unités arbitraires).
+* **avg_delay** : délai moyen des paquets livrés.
+
+## Exemple d'analyse
+
+Un script Python d'exemple nommé `analyse_resultats.py` est disponible dans le
+dossier `examples`. Il agrège plusieurs fichiers CSV et trace le PDR en fonction
+du nombre de nœuds :
+
+```bash
+python examples/analyse_resultats.py resultats1.csv resultats2.csv
+```
+
+Le script affiche le PDR moyen puis sauvegarde un graphique dans
+`pdr_par_nodes.png`.
+
 Ce projet est distribué sous licence [MIT](../LICENSE).
  

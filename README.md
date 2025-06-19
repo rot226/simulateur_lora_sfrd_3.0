@@ -10,7 +10,7 @@ This repository contains a lightweight LoRa network simulator implemented in Pyt
 - Configurable bandwidth and coding rate per channel
 - Initial spreading factor and power selection
 - Basic LoRaWAN layer with LinkADRReq/LinkADRAns
-- Optional battery model to track remaining energy per node
+- Optional battery model to track remaining energy per node (FLoRa energy profile)
 
 ## Quick start
 

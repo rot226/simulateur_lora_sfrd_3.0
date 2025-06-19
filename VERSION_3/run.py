@@ -73,7 +73,7 @@ if __name__ == "__main__":
         gw = Gateway(0, 0, 0)
         ns = NetworkServer()
         ns.gateways = [gw]
-        node = Node(0, 0, 0, 7, 14)
+        node = Node(0, 0, 0, 7, 20)
         frame = node.prepare_uplink(b"ping", confirmed=True)
         ns.send_downlink(node, b"ack")
         rx1, _ = node.schedule_receive_windows(0)

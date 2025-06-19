@@ -38,7 +38,8 @@ class Simulator:
                  channels=None, channel_distribution: str = "round-robin",
                  mobility_speed: tuple[float, float] = (2.0, 10.0),
                  fixed_sf: int | None = None,
-                 fixed_tx_power: float | None = None):
+                 fixed_tx_power: float | None = None,
+                 battery_capacity_j: float | None = None):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -61,6 +62,7 @@ class Simulator:
             ("round-robin" ou "random").
         :param fixed_sf: Si défini, tous les nœuds démarrent avec ce SF.
         :param fixed_tx_power: Si défini, puissance d'émission initiale commune (dBm).
+        :param battery_capacity_j: Capacité de la batterie attribuée à chaque nœud (J). ``None`` pour illimité.
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -73,6 +75,7 @@ class Simulator:
         self.adr_server = adr_server
         self.fixed_sf = fixed_sf
         self.fixed_tx_power = fixed_tx_power
+        self.battery_capacity_j = battery_capacity_j
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         self.mobility_model = SmoothMobility(area_size, mobility_speed[0], mobility_speed[1])
@@ -118,7 +121,8 @@ class Simulator:
             sf = self.fixed_sf if self.fixed_sf is not None else random.randint(7, 12)
             tx_power = self.fixed_tx_power if self.fixed_tx_power is not None else 14.0
             channel = self.multichannel.select()
-            node = Node(node_id, x, y, sf, tx_power, channel=channel)
+            node = Node(node_id, x, y, sf, tx_power, channel=channel,
+                        battery_capacity_j=self.battery_capacity_j)
             # Enregistrer les états initiaux du nœud pour rapport ultérieur
             node.initial_x = x
             node.initial_y = y
@@ -178,6 +182,8 @@ class Simulator:
     
     def schedule_event(self, node: Node, time: float):
         """Planifie un événement de transmission pour un nœud à l'instant donné."""
+        if not node.alive:
+            return
         event_id = self.event_id_counter
         self.event_id_counter += 1
         if self.duty_cycle_manager:
@@ -187,6 +193,8 @@ class Simulator:
     
     def schedule_mobility(self, node: Node, time: float):
         """Planifie un événement de mobilité (déplacement aléatoire) pour un nœud à l'instant donné."""
+        if not node.alive:
+            return
         event_id = self.event_id_counter
         self.event_id_counter += 1
         heapq.heappush(self.event_queue, (time, 2, event_id, node))
@@ -201,6 +209,8 @@ class Simulator:
         # Avancer le temps de simulation
         self.current_time = time
         node.consume_until(time)
+        if not node.alive:
+            return True
         
         if priority == 1:
             # Début d'une transmission émise par 'node'
@@ -220,6 +230,8 @@ class Simulator:
             energy_J = (p_mW / 1000.0) * duration
             self.total_energy_J += energy_J
             node.add_energy(energy_J, "tx")
+            if not node.alive:
+                return True
             node.state = "tx"
             node.last_state_time = time
             # Marquer le nœud comme en cours de transmission
@@ -395,6 +407,8 @@ class Simulator:
         elif priority == 3:
             # Fenêtre de réception RX1/RX2 pour un nœud
             node.add_energy(RX_CURRENT_A * VOLTAGE_V * RX_WINDOW_DURATION, "rx")
+            if not node.alive:
+                return True
             node.last_state_time = time + RX_WINDOW_DURATION
             node.state = "sleep"
             selected_gw = None
@@ -527,6 +541,8 @@ class Simulator:
         df['packets_success'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_success)
         df['packets_collision'] = df['node_id'].apply(lambda nid: node_dict[nid].packets_collision)
         df['energy_consumed_J_node'] = df['node_id'].apply(lambda nid: node_dict[nid].energy_consumed)
+        df['battery_capacity_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_capacity_j)
+        df['battery_remaining_J'] = df['node_id'].apply(lambda nid: node_dict[nid].battery_remaining_j)
         df['downlink_pending'] = df['node_id'].apply(lambda nid: node_dict[nid].downlink_pending)
         df['acks_received'] = df['node_id'].apply(lambda nid: node_dict[nid].acks_received)
         # Colonnes d'intérêt dans un ordre lisible
@@ -534,7 +550,8 @@ class Simulator:
             'event_id', 'node_id', 'initial_x', 'initial_y', 'final_x', 'final_y',
             'initial_sf', 'final_sf', 'initial_tx_power', 'final_tx_power',
             'packets_sent', 'packets_success', 'packets_collision',
-            'energy_consumed_J_node', 'downlink_pending', 'acks_received',
+            'energy_consumed_J_node', 'battery_capacity_J', 'battery_remaining_J',
+            'downlink_pending', 'acks_received',
             'start_time', 'end_time', 'energy_J', 'rssi_dBm', 'snr_dB',
             'result', 'gateway_id'
         ]

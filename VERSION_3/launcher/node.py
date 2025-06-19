@@ -34,15 +34,18 @@ class Node:
     """
 
     def __init__(self, node_id: int, x: float, y: float, sf: int, tx_power: float,
-                 channel=None, devaddr: int | None = None, class_type: str = 'A'):
+                 channel=None, devaddr: int | None = None, class_type: str = 'A',
+                 battery_capacity_j: float | None = None):
         """
         Initialise le nœud avec ses paramètres de départ.
-        
+
         :param node_id: Identifiant du nœud.
         :param x: Position X initiale (mètres).
         :param y: Position Y initiale (mètres).
         :param sf: Spreading Factor initial (entre 7 et 12).
         :param tx_power: Puissance d'émission initiale (dBm).
+        :param battery_capacity_j: Capacité totale de la batterie en joules
+            (``None`` pour capacité illimitée).
         """
         # Identité et paramètres initiaux
         self.id = node_id
@@ -66,6 +69,11 @@ class Node:
         self.packets_sent = 0
         self.packets_success = 0
         self.packets_collision = 0
+
+        # Batterie (énergie disponible restante)
+        self.battery_capacity_j = float('inf') if battery_capacity_j is None else battery_capacity_j
+        self.battery_remaining_j = self.battery_capacity_j
+        self.alive = True
         
         # Paramètres de mobilité (initialement immobile)
         self.speed = 0.0       # Vitesse en m/s
@@ -98,6 +106,13 @@ class Node:
         # Energy accounting state
         self.last_state_time = 0.0
         self.state = 'sleep'
+
+    @property
+    def battery_level(self) -> float:
+        """Return the remaining battery level as a ratio between 0 and 1."""
+        if self.battery_capacity_j == float('inf'):
+            return 1.0
+        return max(0.0, self.battery_remaining_j / self.battery_capacity_j)
 
     def distance_to(self, other) -> float:
         """
@@ -139,6 +154,8 @@ class Node:
             'energy_sleep_J': self.energy_sleep,
             'energy_processing_J': self.energy_processing,
             'energy_consumed_J': self.energy_consumed,
+            'battery_capacity_J': self.battery_capacity_j,
+            'battery_remaining_J': self.battery_remaining_j,
             'packets_sent': self.packets_sent,
             'packets_success': self.packets_success,
             'packets_collision': self.packets_collision,
@@ -187,6 +204,12 @@ class Node:
             self.energy_sleep += energy_joules
         elif state == "processing":
             self.energy_processing += energy_joules
+
+        if self.battery_remaining_j != float('inf'):
+            self.battery_remaining_j -= energy_joules
+            if self.battery_remaining_j <= 0:
+                self.battery_remaining_j = 0.0
+                self.alive = False
 
     def consume_until(self, current_time: float) -> None:
         """Accumulates energy from ``last_state_time`` up to ``current_time``."""

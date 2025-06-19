@@ -17,9 +17,9 @@ class Gateway:
         # Liste des transmissions actuellement en cours de réception sur cette passerelle
         # Chaque élément est un dictionnaire avec 'event_id', 'node_id', 'sf',
         # 'frequency', 'rssi', 'end_time' et 'lost_flag'
-        self.active_transmissions = []
+        self.active_transmissions: list[dict] = []
         # Downlink frames waiting for the corresponding node receive windows
-        self.downlink_buffer = {}
+        self.downlink_buffer: dict[int, list] = {}
 
     def start_reception(self, event_id: int, node_id: int, sf: int, rssi: float,
                         end_time: float, capture_threshold: float, current_time: float,

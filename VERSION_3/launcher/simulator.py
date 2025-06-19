@@ -136,7 +136,7 @@ class Simulator:
         self.network_server.channel = self.channel
         
         # File d'événements (min-heap)
-        self.event_queue = []
+        self.event_queue: list[tuple[float, int, int, Node]] = []
         self.current_time = 0.0
         self.event_id_counter = 0
         
@@ -150,7 +150,7 @@ class Simulator:
         self.delivered_count = 0
         
         # Journal des événements (pour export CSV)
-        self.events_log = []
+        self.events_log: list[dict] = []
         
         # Planifier le premier envoi de chaque nœud
         for node in self.nodes:
@@ -439,7 +439,7 @@ class Simulator:
         # Si autre type d'événement (non prévu)
         return True
     
-    def run(self, max_steps: int = None):
+    def run(self, max_steps: int | None = None):
         """Exécute la simulation en traitant les événements jusqu'à épuisement ou jusqu'à une limite optionnelle."""
         step_count = 0
         while self.event_queue and self.running:

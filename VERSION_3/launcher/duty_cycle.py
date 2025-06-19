@@ -5,7 +5,7 @@ class DutyCycleManager:
             raise ValueError("duty_cycle must be in (0,1]")
         self.duty_cycle = duty_cycle
         # next allowed transmission time per node id
-        self.next_tx_time = {}
+        self.next_tx_time: dict[int, float] = {}
 
     def can_transmit(self, node_id: int, time: float) -> bool:
         """Return True if node can transmit at given time."""

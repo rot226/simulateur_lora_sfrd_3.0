@@ -462,12 +462,32 @@ class Simulator:
         delivered = self.packets_delivered
         pdr = delivered / total_sent if total_sent > 0 else 0.0
         avg_delay = self.total_delay / self.delivered_count if self.delivered_count > 0 else 0.0
+        pdr_by_node = {node.id: node.pdr for node in self.nodes}
+        recent_pdr_by_node = {node.id: node.recent_pdr for node in self.nodes}
+        pdr_by_sf: dict[int, float] = {}
+        for sf in range(7, 13):
+            nodes_sf = [n for n in self.nodes if n.sf == sf]
+            sent_sf = sum(n.packets_sent for n in nodes_sf)
+            delivered_sf = sum(n.packets_success for n in nodes_sf)
+            pdr_by_sf[sf] = delivered_sf / sent_sf if sent_sf > 0 else 0.0
+
+        gateway_counts = {gw.id: 0 for gw in self.gateways}
+        for gw_id in self.network_server.event_gateway.values():
+            if gw_id in gateway_counts:
+                gateway_counts[gw_id] += 1
+        pdr_by_gateway = {gw_id: count / total_sent if total_sent > 0 else 0.0 for gw_id, count in gateway_counts.items()}
+
         return {
             'PDR': pdr,
             'collisions': self.packets_lost_collision,
             'energy_J': self.total_energy_J,
             'avg_delay_s': avg_delay,
-            'sf_distribution': {sf: sum(1 for node in self.nodes if node.sf == sf) for sf in range(7, 13)}
+            'sf_distribution': {sf: sum(1 for node in self.nodes if node.sf == sf) for sf in range(7, 13)},
+            'pdr_by_node': pdr_by_node,
+            'recent_pdr_by_node': recent_pdr_by_node,
+            'pdr_by_sf': pdr_by_sf,
+            'pdr_by_gateway': pdr_by_gateway,
+            'retransmissions': self.packets_lost_collision,
         }
     
     def get_events_dataframe(self) -> 'pd.DataFrame | None':

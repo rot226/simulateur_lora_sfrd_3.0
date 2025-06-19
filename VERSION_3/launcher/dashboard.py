@@ -390,7 +390,8 @@ controls = pn.WidgetBox(
     mobility_speed_min_input,
     mobility_speed_max_input,
     real_time_duration_input,
-    pn.Row(start_button, stop_button, fast_forward_button),
+    pn.Row(start_button, stop_button),
+    fast_forward_button,
     export_button,
     export_message,
 )

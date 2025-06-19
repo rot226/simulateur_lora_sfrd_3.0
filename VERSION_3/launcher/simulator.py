@@ -354,8 +354,8 @@ class Simulator:
                             # Lien de mauvaise qualité – augmenter la portée (augmenter SF ou puissance)
                             if node.sf < 12:
                                 node.sf += 1  # augmenter SF (ralentir le débit pour plus de portée)
-                            elif node.tx_power < 14.0:
-                                node.tx_power = min(14.0, node.tx_power + 3.0)  # augmenter puissance de 3 dB
+                            elif node.tx_power < 20.0:
+                                node.tx_power = min(20.0, node.tx_power + 3.0)  # augmenter puissance de 3 dB
                         elif margin_val is not None and margin_val > 0:
                             # Lien avec bonne marge – optimiser en réduisant SF et/ou puissance
                             steps = int(margin_val // 3)  # nombre d'incréments de 3 dB exploitables

@@ -17,7 +17,15 @@ class LoRaWANFrame:
 
 DR_TO_SF = {0: 12, 1: 11, 2: 10, 3: 9, 4: 8, 5: 7}
 SF_TO_DR = {sf: dr for dr, sf in DR_TO_SF.items()}
-TX_POWER_INDEX_TO_DBM = {0: 14.0, 1: 11.0, 2: 8.0, 3: 5.0, 4: 2.0}
+TX_POWER_INDEX_TO_DBM = {
+    0: 20.0,
+    1: 17.0,
+    2: 14.0,
+    3: 11.0,
+    4: 8.0,
+    5: 5.0,
+    6: 2.0,
+}
 DBM_TO_TX_POWER_INDEX = {int(v): k for k, v in TX_POWER_INDEX_TO_DBM.items()}
 
 

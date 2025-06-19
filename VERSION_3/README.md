@@ -72,7 +72,7 @@ Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 Deux nouvelles cases à cocher du tableau de bord permettent de fixer le
 Spreading Factor et/ou la puissance d'émission de tous les nœuds avant le
 lancement de la simulation. Une fois la case cochée, sélectionnez la valeur
-souhaitée via le curseur associé (SF 7‑12 et puissance 2‑14 dBm). Si la case est
+souhaitée via le curseur associé (SF 7‑12 et puissance 2‑20 dBm). Si la case est
 décochée, chaque nœud conserve des valeurs aléatoires par défaut.
 
 ## Fonctionnalités LoRaWAN

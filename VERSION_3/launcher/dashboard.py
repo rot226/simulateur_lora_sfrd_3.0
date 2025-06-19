@@ -47,7 +47,7 @@ fixed_sf_checkbox = pn.widgets.Checkbox(name="Choisir SF unique", value=False)
 sf_value_input = pn.widgets.IntSlider(name="SF initial", start=7, end=12, value=7, step=1, disabled=True)
 
 fixed_power_checkbox = pn.widgets.Checkbox(name="Choisir puissance unique", value=False)
-tx_power_input = pn.widgets.FloatSlider(name="Puissance Tx (dBm)", start=2, end=14, value=14, step=1, disabled=True)
+tx_power_input = pn.widgets.FloatSlider(name="Puissance Tx (dBm)", start=2, end=20, value=14, step=1, disabled=True)
 
 # --- Multi-canaux ---
 num_channels_input = pn.widgets.IntInput(name="Nb sous-canaux", value=1, step=1, start=1)

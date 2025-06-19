@@ -20,6 +20,8 @@ from VERSION_3.launcher.lorawan import (  # noqa: E402
     DeviceTimeReq,
 )
 
+import random
+
 
 def test_channel_compute_rssi_and_airtime():
     ch = Channel(shadowing_std=0)
@@ -141,3 +143,20 @@ def test_downlink_ack_bit_and_mac_commands():
     frame2 = gw.pop_downlink(node.id)
     node.handle_downlink(frame2)
     assert node.pending_mac_cmd is not None
+
+
+def test_sim_run_and_step_equivalence():
+    random.seed(12345)
+    sim_run = _make_sim(num_nodes=3, same_start=False)
+    sim_run.run()
+    metrics_run = sim_run.get_metrics()
+
+    random.seed(12345)
+    sim_step = _make_sim(num_nodes=3, same_start=False)
+    while sim_step.step():
+        pass
+    metrics_step = sim_step.get_metrics()
+
+    keys = ["PDR", "collisions", "energy_J", "avg_delay_s", "retransmissions"]
+    for key in keys:
+        assert metrics_run[key] == pytest.approx(metrics_step[key])

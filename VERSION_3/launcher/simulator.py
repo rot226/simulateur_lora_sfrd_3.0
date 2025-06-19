@@ -402,9 +402,12 @@ class Simulator:
             if self.adr_node:
                 # Mettre à jour l'historique du nœud (20 dernières transmissions)
                 snr_value = None
+                rssi_value = None
                 if delivered and node.last_snr is not None:
                     snr_value = node.last_snr
-                node.history.append({'snr': snr_value, 'delivered': delivered})
+                if delivered and node.last_rssi is not None:
+                    rssi_value = node.last_rssi
+                node.history.append({'snr': snr_value, 'rssi': rssi_value, 'delivered': delivered})
                 if len(node.history) > 20:
                     node.history.pop(0)
                 # Calculer le PER récent et la marge ADR
@@ -417,39 +420,22 @@ class Simulator:
                     max_snr = max(snr_values)
                     # Marge = meilleur SNR - SNR minimal requis (pour SF actuel) - marge d'installation
                     margin_val = max_snr - Simulator.REQUIRED_SNR.get(node.sf, 0.0) - Simulator.MARGIN_DB
-                # Vérifier déclenchement d'une requête ADR (marge suffisante ou PER trop élevé)
-                if (margin_val is not None and margin_val > 0) or (per > Simulator.PER_THRESHOLD):
+                # Vérifier déclenchement d'une requête ADR
+                if per > Simulator.PER_THRESHOLD or (margin_val is not None and margin_val < 0):
                     if self.adr_server:
-                        # Traitement de la requête ADR côté serveur: calcul des nouveaux SF/TxPower
-                        if per > Simulator.PER_THRESHOLD:
-                            # Lien de mauvaise qualité – augmenter la portée (augmenter SF ou puissance)
-                            if node.sf < 12:
-                                node.sf += 1  # augmenter SF (ralentir le débit pour plus de portée)
-                            elif node.tx_power < 20.0:
-                                node.tx_power = min(20.0, node.tx_power + 3.0)  # augmenter puissance de 3 dB
-                        elif margin_val is not None and margin_val > 0:
-                            # Lien avec bonne marge – optimiser en réduisant SF et/ou puissance
-                            steps = int(margin_val // 3)  # nombre d'incréments de 3 dB exploitables
-                            min_power = 2.0  # puissance minimale (dBm) permise
-                            # Augmenter le débit tant qu'il y a de la marge (et réduire la puissance graduellement)
-                            while steps > 0:
-                                if node.sf > 7:
-                                    node.sf -= 1
-                                    if node.tx_power > min_power:
-                                        node.tx_power = max(min_power, node.tx_power - 3.0)
-                                    steps -= 1
-                                else:
-                                    # SF déjà au minimum, on réduit seulement la puissance si possible
-                                    if node.tx_power > min_power:
-                                        node.tx_power = max(min_power, node.tx_power - 3.0)
-                                        steps -= 1
-                                    else:
-                                        break
-                        # Réinitialiser l'historique ADR après ajustement
+                        # Lien de mauvaise qualité – augmenter la portée uniquement
+                        if node.sf < 12:
+                            node.sf += 1
+                        elif node.tx_power < 20.0:
+                            node.tx_power = min(20.0, node.tx_power + 3.0)
                         node.history.clear()
-                        logger.debug(f"ADR ajusté pour le nœud {node.id}: nouveau SF={node.sf}, TxPower={node.tx_power:.1f} dBm")
+                        logger.debug(
+                            f"ADR ajusté pour le nœud {node.id}: nouveau SF={node.sf}, TxPower={node.tx_power:.1f} dBm"
+                        )
                     else:
-                        logger.debug(f"Requête ADR du nœud {node.id} ignorée (ADR serveur désactivé).")
+                        logger.debug(
+                            f"Requête ADR du nœud {node.id} ignorée (ADR serveur désactivé)."
+                        )
             return True
         
         elif priority == EventType.RX_WINDOW:

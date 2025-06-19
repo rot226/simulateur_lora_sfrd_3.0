@@ -82,13 +82,15 @@ class NetworkServer:
 
             node = next((n for n in self.nodes if n.id == node_id), None)
             if node:
-                new_sf = node.sf
-                if rssi > -120 and node.sf > 7:
-                    new_sf -= 1
-                elif rssi < -120 and node.sf < 12:
-                    new_sf += 1
-                if new_sf != node.sf:
-                    dr = SF_TO_DR.get(new_sf, SF_TO_DR.get(node.sf, 5))
-                    p_idx = DBM_TO_TX_POWER_INDEX.get(int(node.tx_power), 0)
-                    down = LinkADRReq(dr, p_idx).to_bytes()
-                    self.send_downlink(node, down)
+                node.rssi_history.append(rssi)
+                if len(node.rssi_history) > 20:
+                    node.rssi_history.pop(0)
+                if len(node.rssi_history) >= 20:
+                    avg_rssi = sum(node.rssi_history) / len(node.rssi_history)
+                    if avg_rssi > -120 and node.sf > 7:
+                        new_sf = node.sf - 1
+                        dr = SF_TO_DR.get(new_sf, SF_TO_DR.get(node.sf, 5))
+                        p_idx = DBM_TO_TX_POWER_INDEX.get(int(node.tx_power), 0)
+                        down = LinkADRReq(dr, p_idx).to_bytes()
+                        self.send_downlink(node, down)
+                        node.rssi_history.clear()

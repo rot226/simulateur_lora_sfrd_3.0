@@ -56,16 +56,20 @@ aléatoire des fréquences entre les nœuds.
 
 ## Paramètres radio avancés
 
-Le constructeur `Channel` accepte trois options pour modéliser plus finement la
+Le constructeur `Channel` accepte désormais plusieurs options pour affiner la
 réception :
 
 - `cable_loss` : pertes fixes (dB) entre le transceiver et l'antenne.
 - `receiver_noise_floor` : bruit thermique de référence en dBm/Hz (par défaut
   `-174`).
 - `noise_figure` : facteur de bruit du récepteur en dB.
+- `bandwidth` : largeur de bande LoRa (Hz).
+- `coding_rate` : taux de codage (1 pour 4/5 … 4 pour 4/8).
+- `power_variation_std` : écart-type d'une variation aléatoire sur la puissance
+  d'émission.
 
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
-`Channel.compute_rssi`.
+`Channel.compute_rssi` et la détection de capture.
 
 ## SF et puissance initiaux
 

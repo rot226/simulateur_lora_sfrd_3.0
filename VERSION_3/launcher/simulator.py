@@ -246,6 +246,7 @@ class Simulator:
                     node.channel.capture_threshold_dB,
                     self.current_time,
                     node.channel.frequency_hz,
+                    node.channel,
                 )
             
             # Retenir le meilleur RSSI/SNR mesuré pour cette transmission

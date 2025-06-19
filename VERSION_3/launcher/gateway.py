@@ -1,4 +1,5 @@
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,18 @@ class Gateway:
         # Downlink frames waiting for the corresponding node receive windows
         self.downlink_buffer: dict[int, list] = {}
 
-    def start_reception(self, event_id: int, node_id: int, sf: int, rssi: float,
-                        end_time: float, capture_threshold: float, current_time: float,
-                        frequency: float):
+    def start_reception(
+        self,
+        event_id: int,
+        node_id: int,
+        sf: int,
+        rssi: float,
+        end_time: float,
+        capture_threshold: float,
+        current_time: float,
+        frequency: float,
+        channel,
+    ):
         """
         Tente de démarrer la réception d'une nouvelle transmission sur cette passerelle.
         Gère les collisions et le capture effect.
@@ -41,7 +51,8 @@ class Gateway:
         # Récupérer les transmissions actives sur le même SF et la même
         # fréquence qui ne sont pas terminées au current_time.
         concurrent_transmissions = [
-            t for t in self.active_transmissions
+            t
+            for t in self.active_transmissions
             if t['sf'] == sf and t['frequency'] == frequency and t['end_time'] > current_time
         ]
 
@@ -79,6 +90,20 @@ class Gateway:
         if second_strongest_rssi is not None:
             if strongest['rssi'] - second_strongest_rssi >= capture_threshold:
                 capture = True
+
+        if capture:
+            # Vérifier que le gagnant a un SNR suffisant en tenant compte des
+            # interférences des autres transmissions
+            noise_mw = 10 ** (channel.noise_floor_dBm() / 10)
+            interference_mw = sum(
+                10 ** (t['rssi'] / 10)
+                for t in colliders
+                if t is not strongest
+            )
+            snr = 10 * math.log10(10 ** (strongest['rssi'] / 10) / (noise_mw + interference_mw))
+            snr_threshold = channel.sensitivity_dBm.get(sf, -float("inf")) - channel.noise_floor_dBm()
+            if snr < snr_threshold:
+                capture = False
 
         if capture:
             # Le signal le plus fort sera décodé, les autres sont perdus

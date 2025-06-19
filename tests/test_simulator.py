@@ -36,6 +36,20 @@ def test_channel_compute_rssi_and_airtime():
     assert at == pytest.approx(expected_at, rel=1e-6)
 
 
+def test_channel_custom_bandwidth_and_coding_rate():
+    ch = Channel(bandwidth=250e3, coding_rate=3, shadowing_std=0)
+    at = ch.airtime(sf=7, payload_size=10)
+    rs = ch.bandwidth / (2 ** 7)
+    ts = 1.0 / rs
+    de = 0
+    cr_denom = ch.coding_rate + 4
+    numerator = 8 * 10 - 4 * 7 + 28 + 16 - 20 * 0
+    denominator = 4 * (7 - 2 * de)
+    n_payload = max(math.ceil(numerator / denominator), 0) * cr_denom + 8
+    expected = (ch.preamble_symbols + 4.25) * ts + n_payload * ts
+    assert at == pytest.approx(expected, rel=1e-6)
+
+
 def _make_sim(num_nodes: int, same_start: bool) -> Simulator:
     ch = Channel(shadowing_std=0)
     sim = Simulator(
@@ -110,3 +124,34 @@ def test_lorawan_frame_handling():
     up2 = node.prepare_uplink(b"data")
     assert up2.payload.startswith(LinkADRAns().to_bytes())
     assert node.pending_mac_cmd is None
+
+
+def test_capture_effect_with_interference():
+    ch = Channel(shadowing_std=0, power_variation_std=0)
+    sim = Simulator(
+        num_nodes=2,
+        num_gateways=1,
+        area_size=10.0,
+        transmission_mode="Periodic",
+        packet_interval=10.0,
+        packets_to_send=2,
+        mobility=False,
+        duty_cycle=None,
+        channels=[ch],
+        fixed_sf=7,
+        fixed_tx_power=14.0,
+    )
+    gw = sim.gateways[0]
+    for n in sim.nodes:
+        n.x = gw.x + 1.0
+        n.y = gw.y
+    sim.nodes[1].tx_power = sim.nodes[0].tx_power + 7.0
+    sim.event_queue.clear()
+    sim.event_id_counter = 0
+    for node in sim.nodes:
+        sim.schedule_event(node, 0.0)
+    while sim.step():
+        pass
+    assert sim.packets_delivered == 1
+    assert sim.nodes[1].packets_success == 1
+    assert sim.nodes[0].packets_collision == 1

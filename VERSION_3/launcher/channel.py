@@ -12,6 +12,10 @@ class Channel:
         cable_loss_dB: float = 0.0,
         receiver_noise_floor_dBm: float = -174.0,
         noise_figure_dB: float = 6.0,
+        *,
+        bandwidth: float = 125e3,
+        coding_rate: int = 1,
+        power_variation_std: float = 0.0,
     ):
         """
         Initialise le canal radio avec paramètres de propagation.
@@ -22,6 +26,9 @@ class Channel:
         :param cable_loss_dB: Pertes fixes dues au câble/connectique (dB).
         :param receiver_noise_floor_dBm: Niveau de bruit thermique de référence (dBm/Hz).
         :param noise_figure_dB: Facteur de bruit ajouté par le récepteur (dB).
+        :param bandwidth: Largeur de bande LoRa (Hz).
+        :param coding_rate: Taux de codage LoRa (1 pour 4/5 … 4 pour 4/8).
+        :param power_variation_std: Écart-type d'une variation aléatoire appliquée à la puissance TX (dB).
         """
 
         self.frequency_hz = frequency_hz
@@ -30,10 +37,11 @@ class Channel:
         self.cable_loss_dB = cable_loss_dB
         self.receiver_noise_floor_dBm = receiver_noise_floor_dBm
         self.noise_figure_dB = noise_figure_dB
+        self.bandwidth = bandwidth
+        self.coding_rate = coding_rate
+        self.power_variation_std = power_variation_std
 
-        # Paramètres LoRa (BW 125 kHz, CR 4/5, préambule 8, CRC activé)
-        self.bandwidth = 125e3  # 125 kHz
-        self.coding_rate = 1    # CR=1 correspond à 4/5 (dans les formules, CR+4 = 5)
+        # Paramètres LoRa supplémentaires
         self.preamble_symbols = 8
         self.low_data_rate_threshold = 11  # SF >= 11 -> Low Data Rate Optimization activé
 
@@ -73,8 +81,11 @@ class Channel:
         loss = self.path_loss(distance)
         if self.shadowing_std > 0:
             loss += random.gauss(0, self.shadowing_std)
+        tx_pwr = tx_power_dBm
+        if self.power_variation_std > 0:
+            tx_pwr += random.gauss(0, self.power_variation_std)
         # RSSI = P_tx - pertes - pertes câble
-        rssi = tx_power_dBm - loss - self.cable_loss_dB
+        rssi = tx_pwr - loss - self.cable_loss_dB
         snr = rssi - self.noise_floor_dBm()
         return rssi, snr
 

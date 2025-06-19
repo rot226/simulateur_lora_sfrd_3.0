@@ -7,6 +7,8 @@ This repository contains a lightweight LoRa network simulator implemented in Pyt
 - Optional node mobility with Bezier interpolation
 - Multi-channel radio support
 - Advanced channel model with loss and noise parameters
+- Capture effect and interference handling with optional power variations
+- Configurable LoRa bandwidth and coding rate
 - Initial spreading factor and power selection
 - Basic LoRaWAN layer with LinkADRReq/LinkADRAns
 

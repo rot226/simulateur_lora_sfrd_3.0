@@ -111,10 +111,10 @@ Une couche LoRaWAN simplifiée est maintenant disponible. Le module
 `RX1` et `RX2`. Les nœuds possèdent des compteurs de trames et les passerelles
 peuvent mettre en file d'attente des downlinks via `NetworkServer.send_downlink`.
 
-Depuis cette version, les commandes `LinkADRReq`/`LinkADRAns` sont gérées afin
-d'ajuster le Spreading Factor et la puissance d'émission selon la spécification
-LoRaWAN. Le serveur encode la requête et le nœud y répond automatiquement lors
-du prochain uplink.
+Depuis cette version, la gestion ADR suit la spécification LoRaWAN : en plus des
+commandes `LinkADRReq`/`LinkADRAns`, les bits `ADRACKReq` et `ADR` sont pris en
+charge, le `ChMask` et le `NbTrans` peuvent être ajustés et les compteurs
+`adr_ack_cnt` sont respectés.
 
 Lancer l'exemple minimal :
 

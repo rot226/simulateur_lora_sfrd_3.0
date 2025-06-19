@@ -31,7 +31,7 @@ class NetworkServer:
         node,
         payload: bytes = b"",
         confirmed: bool = False,
-        adr_command: tuple[int, float] | None = None,
+        adr_command: tuple | None = None,
         request_ack: bool = False,
     ):
         """Queue a downlink frame for a node via the first gateway."""
@@ -50,10 +50,15 @@ class NetworkServer:
             mhdr=0x60, fctrl=fctrl, fcnt=node.fcnt_down, payload=payload, confirmed=confirmed
         )
         if adr_command:
-            sf, power = adr_command
+            if len(adr_command) == 2:
+                sf, power = adr_command
+                chmask = node.chmask
+                nbtrans = node.nb_trans
+            else:
+                sf, power, chmask, nbtrans = adr_command
             dr = SF_TO_DR.get(sf, 5)
             p_idx = DBM_TO_TX_POWER_INDEX.get(int(power), 0)
-            frame.payload = LinkADRReq(dr, p_idx).to_bytes()
+            frame.payload = LinkADRReq(dr, p_idx, chmask, nbtrans).to_bytes()
         node.fcnt_down += 1
         gw.buffer_downlink(node.id, frame)
         try:
@@ -82,7 +87,7 @@ class NetworkServer:
 
         # Appliquer ADR complet au niveau serveur
         if self.adr_enabled and rssi is not None:
-            from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, LinkADRReq, TX_POWER_INDEX_TO_DBM
+            from .lorawan import SF_TO_DR, DBM_TO_TX_POWER_INDEX, TX_POWER_INDEX_TO_DBM
 
             node = next((n for n in self.nodes if n.id == node_id), None)
             if node:
@@ -117,7 +122,5 @@ class NetworkServer:
                         nstep += 1
 
                     if sf != node.sf or power != node.tx_power:
-                        dr = SF_TO_DR.get(sf, SF_TO_DR.get(node.sf, 5))
-                        cmd = LinkADRReq(dr, p_idx).to_bytes()
-                        self.send_downlink(node, cmd)
+                        self.send_downlink(node, adr_command=(sf, power, node.chmask, node.nb_trans))
                         node.snr_history.clear()

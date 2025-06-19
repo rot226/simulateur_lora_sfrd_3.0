@@ -22,6 +22,19 @@ Bienvenue ! Ce projet est un **simulateur complet de réseau LoRa**, inspiré du
    python run.py --nodes 5 --mode Periodic --interval 10
    ```
 
+## Exemples d'utilisation avancés
+
+Quelques commandes pour tester des scénarios plus complexes :
+
+```bash
+# Simulation multi-canaux avec mobilité
+python run.py --nodes 50 --gateways 2 --area 2000 --channels 3 \
+  --mobility --steps 500 --output avances.csv
+
+# Démonstration LoRaWAN avec downlinks
+python run.py --lorawan-demo --steps 100 --output lorawan.csv
+```
+
 ## Duty cycle
 
 Le simulateur applique par défaut un duty cycle de 1 % pour se rapprocher des
@@ -132,6 +145,18 @@ python examples/analyse_resultats.py resultats1.csv resultats2.csv
 
 Le script affiche le PDR moyen puis sauvegarde un graphique dans
 `pdr_par_nodes.png`.
+
+## Validation des résultats
+
+L'exécution de `pytest` permet de vérifier la cohérence des calculs de RSSI et le traitement des collisions :
+
+```bash
+pytest -q
+```
+
+Vous pouvez aussi comparer les métriques générées avec les formules théoriques détaillées dans `tests/test_simulator.py`.
+
+Pour suivre les évolutions du projet, consultez le fichier `CHANGELOG.md`.
 
 Ce projet est distribué sous licence [MIT](../LICENSE).
 

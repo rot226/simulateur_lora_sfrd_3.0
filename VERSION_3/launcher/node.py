@@ -274,11 +274,13 @@ class Node:
         )
 
         self.fcnt_down = frame.fcnt + 1
-        if frame.confirmed:
+        if frame.fctrl & 0x20:
+            # ACK bit set -> the server acknowledged our last uplink
             self.awaiting_ack = False
             self.acks_received += 1
 
-        if frame.fctrl & 0x20:
+        if frame.confirmed:
+            # Confirmed downlink -> we must acknowledge on next uplink
             self.need_downlink_ack = True
 
         self.downlink_pending = max(0, self.downlink_pending - 1)

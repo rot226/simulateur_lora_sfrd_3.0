@@ -71,6 +71,10 @@ aléatoire des fréquences entre les nœuds.
 
 Le tableau de bord permet maintenant de fixer une **durée réelle maximale** en secondes. Lorsque cette limite est atteinte, la simulation s'arrête automatiquement. Un bouton « Accélérer jusqu'à la fin » lance l'exécution rapide pour obtenir aussitôt les métriques finales.
 
+## Suivi de batterie
+
+Chaque nœud peut être doté d'une capacité d'énergie (en joules) grâce au paramètre `battery_capacity_j` du `Simulator`. La consommation est retranchée de cette réserve et le champ `battery_remaining_j` indique l'autonomie restante.
+
 ## Paramètres radio avancés
 
 Le constructeur `Channel` accepte plusieurs options pour modéliser plus finement la

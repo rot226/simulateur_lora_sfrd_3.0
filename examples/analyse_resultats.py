@@ -21,7 +21,10 @@ results = pd.concat(dfs, ignore_index=True)
 
 # Conversion des colonnes numériques
 results['PDR(%)'] = results['PDR(%)'].astype(float)
-results['energy'] = results['energy'].astype(float)
+if 'energy_J' in results.columns:
+    results['energy_J'] = results['energy_J'].astype(float)
+elif 'energy' in results.columns:  # compatibilité anciennes versions
+    results['energy'] = results['energy'].astype(float)
 
 print(results)
 print(f"PDR moyen: {results['PDR(%)'].mean():.2f}%")

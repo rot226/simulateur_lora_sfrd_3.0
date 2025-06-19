@@ -103,7 +103,7 @@ def test_lorawan_frame_handling():
     server = NetworkServer()
     server.gateways = [gw]
     server.nodes = [node]
-    server.send_downlink(node, b"", confirmed=True, adr_command=(9, 5.0))
+    server.send_downlink(node, b"", confirmed=True, adr_command=(9, 5.0), request_ack=True)
 
     down = gw.pop_downlink(node.id)
     assert down is not None
@@ -112,10 +112,13 @@ def test_lorawan_frame_handling():
     assert node.tx_power == 5.0
     assert node.pending_mac_cmd == LinkADRAns().to_bytes()
     assert node.awaiting_ack is False
+    assert node.need_downlink_ack
 
     up2 = node.prepare_uplink(b"data")
+    assert up2.fctrl & 0x20
     assert up2.payload.startswith(LinkADRAns().to_bytes())
     assert node.pending_mac_cmd is None
+    assert not node.need_downlink_ack
 
 
 def test_downlink_ack_bit_and_mac_commands():
@@ -125,10 +128,18 @@ def test_downlink_ack_bit_and_mac_commands():
     server.gateways = [gw]
     server.nodes = [node]
 
-    server.send_downlink(node, LinkCheckReq().to_bytes(), request_ack=True)
+    node.prepare_uplink(b"foo", confirmed=True)
+    assert node.awaiting_ack
+
+    server.send_downlink(
+        node,
+        LinkCheckReq().to_bytes(),
+        confirmed=True,
+        request_ack=True,
+    )
     frame = gw.pop_downlink(node.id)
-    assert frame.fctrl & 0x20
     node.handle_downlink(frame)
+    assert not node.awaiting_ack
     assert node.need_downlink_ack
     assert node.pending_mac_cmd == LinkCheckAns(margin=255, gw_cnt=1).to_bytes()
 

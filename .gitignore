@@ -1,0 +1,9 @@
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Virtual environments
+env/
+
+# Result CSV files
+*.csv

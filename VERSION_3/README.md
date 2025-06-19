@@ -54,6 +54,10 @@ Le simulateur permet d'utiliser plusieurs canaux radio. Passez une instance
 sous-canaux** et **Répartition canaux** pour tester un partage Round‑robin ou
 aléatoire des fréquences entre les nœuds.
 
+## Durée et accélération de la simulation
+
+Le tableau de bord permet maintenant de fixer une **durée réelle maximale** en secondes. Lorsque cette limite est atteinte, la simulation s'arrête automatiquement. Un bouton « Accélérer jusqu'à la fin » lance l'exécution rapide pour obtenir aussitôt les métriques finales.
+
 ## Paramètres radio avancés
 
 Le constructeur `Channel` accepte plusieurs options pour modéliser plus finement la

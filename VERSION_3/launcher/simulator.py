@@ -209,11 +209,13 @@ class Simulator:
             # Mettre à jour les compteurs de paquets émis
             self.packets_sent += 1
             node.increment_sent()
-            # Énergie consommée par la transmission (E = P(mW) * t)
-            p_mW = 10 ** (tx_power / 10.0)  # convertir dBm en mW
-            energy_J = (p_mW / 1000.0) * duration
-            self.total_energy_J += energy_J
-            node.add_energy(energy_J)
+            energy_before = node.energy_consumed
+            node.update_energy(time)
+            node.set_state("tx")
+            node.update_energy(end_time)
+            node.set_state("sleep")
+            energy_inc = node.energy_consumed - energy_before
+            self.total_energy_J += energy_inc
             # Marquer le nœud comme en cours de transmission
             node.in_transmission = True
             node.current_end_time = end_time
@@ -285,7 +287,7 @@ class Simulator:
                 'sf': sf,
                 'start_time': time,
                 'end_time': end_time,
-                'energy_J': energy_J,
+                'energy_J': energy_inc,
                 'heard': heard_by_any,
                 'rssi_dBm': best_rssi,
                 'snr_dB': best_snr,
@@ -296,6 +298,7 @@ class Simulator:
         
         elif priority == 0:
             # Fin d'une transmission – traitement de la réception/perte
+            node.update_energy(time)
             node_id = node.id
             # Marquer la fin de transmission du nœud
             node.in_transmission = False
@@ -385,6 +388,13 @@ class Simulator:
         
         elif priority == 3:
             # Fenêtre de réception RX1/RX2 pour un nœud
+            energy_before = node.energy_consumed
+            node.update_energy(time)
+            node.set_state("rx")
+            node.update_energy(time + node.rx_duration)
+            node.set_state("sleep")
+            energy_inc = node.energy_consumed - energy_before
+            self.total_energy_J += energy_inc
             selected_gw = None
             for gw in self.gateways:
                 frame = gw.pop_downlink(node.id)
@@ -416,6 +426,7 @@ class Simulator:
             if not self.mobility_enabled:
                 return True
             node_id = node.id
+            node.update_energy(time)
             if node.in_transmission:
                 # Si le nœud est en cours de transmission, reporter le déplacement à la fin de celle-ci
                 next_move_time = node.current_end_time if node.current_end_time is not None else self.current_time

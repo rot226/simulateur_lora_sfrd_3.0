@@ -50,6 +50,13 @@ class Node:
         self.packets_sent = 0
         self.packets_success = 0
         self.packets_collision = 0
+        # Paramètres d'énergie inspirés de FLoRa
+        self.voltage_V = 3.0
+        self.rx_current_mA = 11.5
+        self.sleep_current_mA = 0.001
+        self.rx_duration = 0.128
+        self.current_state = "sleep"
+        self.last_event_time = 0.0
         
         # Paramètres de mobilité (initialement immobile)
         self.speed = 0.0       # Vitesse en m/s
@@ -140,6 +147,25 @@ class Node:
         :param energy_joules: Énergie (J) dépensée lors de l'envoi d'un paquet.
         """
         self.energy_consumed += energy_joules
+
+    # ------------------------------------------------------------------
+    # Gestion de l'énergie (profil FLoRa simplifié)
+    # ------------------------------------------------------------------
+    def _power_mW(self) -> float:
+        if self.current_state == "tx":
+            return 10 ** (self.tx_power / 10.0)
+        if self.current_state == "rx":
+            return self.rx_current_mA * self.voltage_V
+        return self.sleep_current_mA * self.voltage_V
+
+    def update_energy(self, current_time: float) -> None:
+        dt = current_time - self.last_event_time
+        if dt > 0:
+            self.energy_consumed += (self._power_mW() / 1000.0) * dt
+            self.last_event_time = current_time
+
+    def set_state(self, state: str) -> None:
+        self.current_state = state
 
     # ------------------------------------------------------------------
     # LoRaWAN helper methods

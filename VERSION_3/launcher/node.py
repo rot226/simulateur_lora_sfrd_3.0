@@ -2,6 +2,43 @@
 import math
 
 class Node:
+    __slots__ = (
+        "id",
+        "initial_x",
+        "initial_y",
+        "x",
+        "y",
+        "initial_sf",
+        "sf",
+        "initial_tx_power",
+        "tx_power",
+        "channel",
+        "energy_consumed",
+        "packets_sent",
+        "packets_success",
+        "packets_collision",
+        "speed",
+        "direction",
+        "vx",
+        "vy",
+        "last_move_time",
+        "path",
+        "path_progress",
+        "path_duration",
+        "devaddr",
+        "fcnt_up",
+        "fcnt_down",
+        "class_type",
+        "awaiting_ack",
+        "pending_mac_cmd",
+        "history",
+        "in_transmission",
+        "current_end_time",
+        "last_rssi",
+        "last_snr",
+        "downlink_pending",
+        "acks_received",
+    )
     """
     Représente un nœud IoT (LoRa) dans la simulation, avec suivi complet des métriques de performance.
     

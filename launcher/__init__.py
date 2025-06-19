@@ -19,6 +19,7 @@ __path__.append(os.path.abspath(_pkg_dir))
 
 # Re-export public symbols from the versioned package.
 module = import_module("VERSION_3.launcher")
-for name in getattr(module, "__all__", []):
+__all__ = list(getattr(module, "__all__", []))
+for name in __all__:
     globals()[name] = getattr(module, name)
 

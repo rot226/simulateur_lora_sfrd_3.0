@@ -2,8 +2,8 @@ import os
 import sys
 
 import panel as pn
-import pandas as pd
 import plotly.graph_objects as go
+import time
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
 # depuis lequel ce fichier est exécuté. On ajoute le dossier parent
@@ -14,9 +14,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from launcher.simulator import Simulator
-import numpy as np
-import time
+from launcher.simulator import Simulator  # noqa: E402
 
 # --- Initialisation Panel ---
 pn.extension("plotly")

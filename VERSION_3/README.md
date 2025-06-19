@@ -92,4 +92,6 @@ Lancer l'exemple minimal :
 ```bash
 python run.py --lorawan-demo
 ```
+
+Ce projet est distribué sous licence [MIT](../LICENSE).
  

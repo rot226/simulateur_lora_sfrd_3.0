@@ -30,3 +30,5 @@ python run.py --nodes 20 --steps 100
 ```
 
 For a detailed description of all options, see `VERSION_3/README.md`.
+
+This project is licensed under the [MIT License](LICENSE).

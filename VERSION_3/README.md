@@ -56,13 +56,15 @@ aléatoire des fréquences entre les nœuds.
 
 ## Paramètres radio avancés
 
-Le constructeur `Channel` accepte trois options pour modéliser plus finement la
+Le constructeur `Channel` accepte plusieurs options pour modéliser plus finement la
 réception :
 
 - `cable_loss` : pertes fixes (dB) entre le transceiver et l'antenne.
 - `receiver_noise_floor` : bruit thermique de référence en dBm/Hz (par défaut
   `-174`).
 - `noise_figure` : facteur de bruit du récepteur en dB.
+- `noise_floor_std` : écart-type de la variation aléatoire du bruit (dB).
+- `fast_fading_std` : amplitude du fading multipath en dB.
 
 Ces valeurs influencent le calcul du RSSI et du SNR retournés par
 `Channel.compute_rssi`.

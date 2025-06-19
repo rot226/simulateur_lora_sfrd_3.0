@@ -336,7 +336,7 @@ class Node:
         """Reduce data rate when ADR_ACK_DELAY has elapsed with no downlink."""
         from .lorawan import DBM_TO_TX_POWER_INDEX, TX_POWER_INDEX_TO_DBM
 
-        if self.adr_ack_cnt > self.adr_ack_limit + self.adr_ack_delay:
+        if self.adr_ack_cnt >= self.adr_ack_limit + self.adr_ack_delay:
             if self.sf < 12:
                 self.sf += 1
             else:

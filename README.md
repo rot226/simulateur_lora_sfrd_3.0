@@ -34,4 +34,38 @@ python VERSION_3/run.py --nodes 20 --steps 100
 
 For a detailed description of all options, see `VERSION_3/README.md`.
 
+## Advanced usage
+
+Here are some commands to explore more simulator features:
+
+```bash
+# Multi-channel simulation with node mobility
+python VERSION_3/run.py --nodes 50 --gateways 2 --area 2000 --channels 3 \
+  --mobility --steps 500 --output advanced.csv
+
+# LoRaWAN demo with downlinks
+python VERSION_3/run.py --lorawan-demo --steps 100 --output lorawan.csv
+```
+
+You can analyse the resulting CSV file with:
+
+```bash
+python examples/analyse_resultats.py advanced.csv
+```
+
+## Validating results
+
+Run the test suite to ensure everything works as expected:
+
+```bash
+pytest -q
+```
+
+The tests compare RSSI and airtime calculations against theoretical values and check collision handling.
+
+## Versioning
+
+The current package version is defined in `pyproject.toml`.
+See `CHANGELOG.md` for a summary of releases.
+
 This project is licensed under the [MIT License](LICENSE).

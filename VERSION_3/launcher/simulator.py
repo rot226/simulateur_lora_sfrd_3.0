@@ -52,7 +52,8 @@ class Simulator:
                  mobility_speed: tuple[float, float] = (2.0, 10.0),
                  fixed_sf: int | None = None,
                  fixed_tx_power: float | None = None,
-                 battery_capacity_j: float | None = None):
+                 battery_capacity_j: float | None = None,
+                 payload_size_bytes: int = 20):
         """
         Initialise la simulation LoRa avec les entités et paramètres donnés.
         :param num_nodes: Nombre de nœuds à simuler.
@@ -76,6 +77,7 @@ class Simulator:
         :param fixed_sf: Si défini, tous les nœuds démarrent avec ce SF.
         :param fixed_tx_power: Si défini, puissance d'émission initiale commune (dBm).
         :param battery_capacity_j: Capacité de la batterie attribuée à chaque nœud (J). ``None`` pour illimité.
+        :param payload_size_bytes: Taille du payload utilisé pour calculer l'airtime (octets).
         """
         # Paramètres de simulation
         self.num_nodes = num_nodes
@@ -89,6 +91,7 @@ class Simulator:
         self.fixed_sf = fixed_sf
         self.fixed_tx_power = fixed_tx_power
         self.battery_capacity_j = battery_capacity_j
+        self.payload_size_bytes = payload_size_bytes
         # Activation ou non de la mobilité des nœuds
         self.mobility_enabled = mobility
         self.mobility_model = SmoothMobility(area_size, mobility_speed[0], mobility_speed[1])
@@ -252,7 +255,7 @@ class Simulator:
             sf = node.sf
             tx_power = node.tx_power
             # Durée de la transmission
-            duration = node.channel.airtime(sf)
+            duration = node.channel.airtime(sf, payload_size=self.payload_size_bytes)
             end_time = time + duration
             if self.duty_cycle_manager:
                 self.duty_cycle_manager.update_after_tx(node_id, time, duration)
@@ -546,6 +549,12 @@ class Simulator:
         delivered = self.packets_delivered
         pdr = delivered / total_sent if total_sent > 0 else 0.0
         avg_delay = self.total_delay / self.delivered_count if self.delivered_count > 0 else 0.0
+        sim_time = self.current_time
+        throughput_bps = (
+            self.packets_delivered * self.payload_size_bytes * 8 / sim_time
+            if sim_time > 0
+            else 0.0
+        )
         pdr_by_node = {node.id: node.pdr for node in self.nodes}
         recent_pdr_by_node = {node.id: node.recent_pdr for node in self.nodes}
         pdr_by_sf: dict[int, float] = {}
@@ -566,6 +575,7 @@ class Simulator:
             'collisions': self.packets_lost_collision,
             'energy_J': self.total_energy_J,
             'avg_delay_s': avg_delay,
+            'throughput_bps': throughput_bps,
             'sf_distribution': {sf: sum(1 for node in self.nodes if node.sf == sf) for sf in range(7, 13)},
             'pdr_by_node': pdr_by_node,
             'recent_pdr_by_node': recent_pdr_by_node,

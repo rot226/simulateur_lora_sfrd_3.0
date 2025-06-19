@@ -128,7 +128,7 @@ L'option `--output` de `run.py` permet d'enregistrer les métriques de la
 simulation dans un fichier CSV. Ce dernier contient l'en‑tête suivant :
 
 ```
-nodes,gateways,area,mode,interval,steps,delivered,collisions,PDR(%),energy,avg_delay
+nodes,gateways,area,mode,interval,steps,delivered,collisions,PDR(%),energy,avg_delay,throughput_bps
 ```
 
 * **nodes** : nombre de nœuds simulés.
@@ -142,6 +142,7 @@ nodes,gateways,area,mode,interval,steps,delivered,collisions,PDR(%),energy,avg_d
 * **PDR(%)** : taux de livraison en pourcentage.
 * **energy** : énergie totale consommée (unités arbitraires).
 * **avg_delay** : délai moyen des paquets livrés.
+* **throughput_bps** : débit binaire moyen des paquets délivrés.
 
 ## Exemple d'analyse
 

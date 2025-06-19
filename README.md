@@ -22,7 +22,7 @@ source env/bin/activate  # On Windows use env\Scripts\activate
 pip install -r requirements.txt
 
 # Launch the dashboard
-panel serve dashboard.py --show
+panel serve launcher/dashboard.py --show
 
 # Run a simulation
 python run.py --nodes 20 --steps 100
